@@ -1,18 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-
-const SYMPTOMS = [
-  { slug: 'gamgi', label: '감기' },
-  { slug: 'duto', label: '두통' },
-  { slug: 'wijang', label: '소화·위장' },
-  { slug: 'baltyeol', label: '발열·해열' },
-  { slug: 'tongjeung', label: '통증' },
-  { slug: 'almreugi', label: '알레르기' },
-  { slug: 'byunbi', label: '변비' },
-  { slug: 'seolssa', label: '설사' },
-  { slug: 'sumyeon', label: '수면' },
-  { slug: 'pibu', label: '피부' },
-];
+import { SYMPTOMS } from '../../lib/symptoms';
 ---
 <Layout title="증상별 약 찾기" description="감기·두통·위장 등 증상별로 의약품 검색">
   <h2>증상별 약 찾기</h2>
