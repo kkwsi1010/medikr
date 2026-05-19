@@ -9,8 +9,8 @@ import {
 } from '../../lib/mfds';
 
 export async function getStaticPaths() {
-  // W1 단계 — 검증용 5개만 빌드. W2에서 50, W3에서 100으로 확장.
-  const { items } = await listEasyDrugs(1, 5);
+  // W2 단계 — 50 페이지 빌드. W3에서 100, W5에서 5,000, W7에서 5만으로 확장.
+  const { items } = await listEasyDrugs(1, 50);
   return items.map((drug: EasyDrug) => ({
     params: { itemSeq: drug.itemSeq },
     props: { drug },

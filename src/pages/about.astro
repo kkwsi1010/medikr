@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="운영자 정보" description="medikr.kr 운영자 정보 및 연락처">
+  <h2>운영자 정보</h2>
+
+  <section>
+    <h3>사이트</h3>
+    <dl>
+      <dt>이름</dt><dd>medikr</dd>
+      <dt>주소</dt><dd>https://medikr.kr</dd>
+      <dt>개설일</dt><dd>2026-05-19</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h3>운영 목적</h3>
+    <p>일반인이 처방받았거나 복용 중인 의약품의 정보(효능·부작용·주의사항·병용금기 등)를 무료로 쉽게 검색할 수 있도록 제공합니다.</p>
+  </section>
+
+  <section>
+    <h3>데이터 출처</h3>
+    <ul>
+      <li>식품의약품안전처 OpenAPI — 의약품개요정보(e약은요)</li>
+      <li>식품의약품안전처 OpenAPI — 의약품 제품 허가정보</li>
+      <li>식품의약품안전처 OpenAPI — 의약품 낱알식별 정보</li>
+      <li>식품의약품안전처 OpenAPI — 의약품안전사용서비스 (DUR)</li>
+    </ul>
+    <p>출처: <a href="https://www.data.go.kr/" rel="noopener noreferrer" target="_blank">공공데이터포털</a> (공공누리 1유형)</p>
+  </section>
+
+  <section>
+    <h3>중요 안내</h3>
+    <ul>
+      <li>본 사이트는 식약처가 운영하는 사이트가 아닙니다.</li>
+      <li>본 사이트의 정보는 의료 행위가 아닙니다. 복용 전 의사·약사와 상의하십시오.</li>
+      <li>응급 상황에서는 119에 연락하거나 의료기관을 즉시 방문하십시오.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>문의</h3>
+    <p>오류 신고·정보 갱신 요청: 이메일로 연락 주십시오.</p>
+    <p>이메일: <a href="mailto:contact@medikr.kr">contact@medikr.kr</a></p>
+  </section>
+
+  <section>
+    <h3>관련 페이지</h3>
+    <ul>
+      <li><a href="/privacy">개인정보처리방침</a></li>
+      <li><a href="/terms">이용약관</a></li>
+    </ul>
+  </section>
+</Layout>
