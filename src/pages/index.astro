@@ -5,14 +5,41 @@ import { listEasyDrugs } from '../lib/mfds';
 const { items, totalCount } = await listEasyDrugs(1, 20);
 ---
 <Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 효능·부작용·병용금기 검색">
-  <h2>최근 등록 의약품</h2>
-  <p>총 <strong>{totalCount.toLocaleString()}</strong>개 의약품 정보 (e약은요 기준)</p>
-  <ul>
-    {items.map((drug) => (
-      <li>
-        <a href={`/약/${drug.itemSeq}`}>{drug.itemName}</a>
-        {drug.entpName && <span style="color:#666"> — {drug.entpName}</span>}
-      </li>
-    ))}
-  </ul>
+  <section>
+    <h2>의약품 정보 검색</h2>
+    <p>식품의약품안전처 공식 데이터를 기반으로 의약품의 <strong>효능·부작용·주의사항·병용금기</strong>를 검색할 수 있습니다.</p>
+    <p>
+      <a
+        href="/search"
+        style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600"
+      >🔍 약 이름으로 검색</a>
+    </p>
+  </section>
+
+  <section>
+    <h3>최근 등록 의약품</h3>
+    {totalCount > 0 ? (
+      <>
+        <p style="color:#666;font-size:14px">총 <strong>{totalCount.toLocaleString()}</strong>개 의약품 (e약은요 기준)</p>
+        <ul>
+          {items.map((drug) => (
+            <li>
+              <a href={`/약/${drug.itemSeq}`}>{drug.itemName}</a>
+              {drug.entpName && <span style="color:#666"> — {drug.entpName}</span>}
+            </li>
+          ))}
+        </ul>
+      </>
+    ) : (
+      <p style="color:#888;font-style:italic">
+        의약품 데이터를 불러오는 중입니다. (환경변수 MFDS_API_KEY 설정 후 재배포 시 표시됩니다)
+      </p>
+    )}
+  </section>
+
+  <section>
+    <h3>이 사이트는?</h3>
+    <p>본 사이트는 일반인을 위한 의약품 정보 큐레이션 사이트입니다. 식약처가 운영하는 사이트가 아니며, 정보는 <a href="https://www.data.go.kr/" rel="noopener" target="_blank">공공데이터포털</a> 의 식약처 OpenAPI 를 통해 수집·갱신됩니다.</p>
+    <p><strong>주의</strong>: 본 사이트의 정보는 의료 행위가 아닙니다. 복용·중단 결정은 의사·약사와 상의하십시오.</p>
+  </section>
 </Layout>

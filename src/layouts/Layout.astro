@@ -7,6 +7,12 @@ interface Props {
 
 const { title, description = '식약처 공식 데이터 기반 의약품 정보 검색', ogImage } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
+
+// Analytics & Ads — env vars 가 없으면 코드가 삽입되지 않음 (placeholder pattern)
+const GA4_ID = import.meta.env.PUBLIC_GA4_ID as string | undefined;
+const ADSENSE_CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+const NAVER_SITE_VERIFY = import.meta.env.PUBLIC_NAVER_VERIFY as string | undefined;
+const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | undefined;
 ---
 <!DOCTYPE html>
 <html lang="ko">
@@ -23,6 +29,25 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
   {ogImage && <meta property="og:image" content={ogImage} />}
   <meta name="twitter:card" content="summary" />
   <link rel="canonical" href={canonical} />
+
+  {GOOGLE_SITE_VERIFY && <meta name="google-site-verification" content={GOOGLE_SITE_VERIFY} />}
+  {NAVER_SITE_VERIFY && <meta name="naver-site-verification" content={NAVER_SITE_VERIFY} />}
+
+  {GA4_ID && (
+    <>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}></script>
+      <script set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA4_ID}');`}></script>
+    </>
+  )}
+
+  {ADSENSE_CLIENT && (
+    <script
+      async
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+      crossorigin="anonymous"
+    ></script>
+  )}
+
   <style is:global>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }

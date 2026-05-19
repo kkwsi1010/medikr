@@ -1,0 +1,61 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { listEasyDrugs } from '../lib/mfds';
+
+type SearchItem = { itemSeq: string; itemName: string; entpName: string };
+
+// 빌드 시 모든 약 인덱스 수집 (graceful — KEY 없으면 빈 배열)
+const all: SearchItem[] = [];
+const PER = 100;
+const MAX_PAGES = 50; // safety cap (4,757 / 100 = 48)
+for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+  const { items, totalCount } = await listEasyDrugs(pageNo, PER);
+  for (const d of items) {
+    all.push({ itemSeq: d.itemSeq, itemName: d.itemName, entpName: d.entpName });
+  }
+  if (items.length < PER || pageNo * PER >= totalCount) break;
+}
+---
+<Layout title="검색" description={`${all.length.toLocaleString()}개 의약품 이름·업체로 빠른 검색`}>
+  <h2>의약품 검색</h2>
+  <p>총 <strong>{all.length.toLocaleString()}</strong>개 의약품에서 검색합니다.</p>
+  <input
+    type="search"
+    id="q"
+    placeholder="약 이름 또는 업체명을 입력하세요"
+    autocomplete="off"
+    style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:6px;margin:8px 0"
+  />
+  <ul id="results" style="margin-top:12px"></ul>
+
+  <script type="application/json" id="search-data" set:html={JSON.stringify(all)}></script>
+
+  <script set:html={`
+    (function() {
+      const dataEl = document.getElementById('search-data');
+      const DATA = JSON.parse(dataEl.textContent);
+      const q = document.getElementById('q');
+      const ul = document.getElementById('results');
+      let timer;
+      function render(term) {
+        term = term.trim().toLowerCase();
+        if (!term || term.length < 2) { ul.innerHTML = ''; return; }
+        const matches = DATA.filter(function(d) {
+          return d.itemName.toLowerCase().includes(term) || d.entpName.toLowerCase().includes(term);
+        }).slice(0, 100);
+        if (matches.length === 0) {
+          ul.innerHTML = '<li style="color:#666">검색 결과 없음</li>';
+          return;
+        }
+        ul.innerHTML = matches.map(function(d) {
+          return '<li><a href="/약/' + d.itemSeq + '">' + d.itemName + '</a> <span style="color:#666">— ' + d.entpName + '</span></li>';
+        }).join('');
+      }
+      q.addEventListener('input', function(e) {
+        clearTimeout(timer);
+        timer = setTimeout(function() { render(e.target.value); }, 150);
+      });
+      q.focus();
+    })();
+  `}></script>
+</Layout>

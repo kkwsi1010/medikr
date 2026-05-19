@@ -9,9 +9,16 @@ import {
 } from '../../lib/mfds';
 
 export async function getStaticPaths() {
-  // W2 단계 — 50 페이지 빌드. W3에서 100, W5에서 5,000, W7에서 5만으로 확장.
-  const { items } = await listEasyDrugs(1, 50);
-  return items.map((drug: EasyDrug) => ({
+  // W3 단계 — 500 페이지. W5: 5,000, W7: e약은요 전체 4,757 + 허가정보 마스터까지.
+  // 페이지당 추가로 pill/permit/taboos 3개 API 호출 (Promise.all) → 빌드 ~100s 예상.
+  const all: EasyDrug[] = [];
+  const PER = 100;
+  for (let pageNo = 1; pageNo <= 5; pageNo++) {
+    const { items, totalCount } = await listEasyDrugs(pageNo, PER);
+    all.push(...items);
+    if (items.length < PER || pageNo * PER >= totalCount) break;
+  }
+  return all.map((drug) => ({
     params: { itemSeq: drug.itemSeq },
     props: { drug },
   }));
