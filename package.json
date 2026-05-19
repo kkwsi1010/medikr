@@ -16,6 +16,7 @@
     "@astrojs/sitemap": "^3.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
   }

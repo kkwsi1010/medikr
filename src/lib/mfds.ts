@@ -1,8 +1,12 @@
 const KEY = import.meta.env.MFDS_API_KEY;
 const BASE = 'https://apis.data.go.kr/1471000';
+const HAS_KEY = Boolean(KEY);
 
-if (!KEY) {
-  throw new Error('MFDS_API_KEY environment variable is not set');
+if (!HAS_KEY) {
+  console.warn(
+    '[mfds] MFDS_API_KEY not set — API calls return empty data. ' +
+    'Set this env var in Cloudflare Pages Settings → Variables and Secrets.'
+  );
 }
 
 export type EasyDrug = {
@@ -68,26 +72,36 @@ async function fetchApi<T>(
   endpoint: string,
   params: Record<string, string> = {}
 ): Promise<{ items: T[]; totalCount: number }> {
+  if (!HAS_KEY) {
+    return { items: [], totalCount: 0 };
+  }
   const query = new URLSearchParams({
-    serviceKey: KEY,
+    serviceKey: KEY!,
     type: 'json',
     pageNo: '1',
     numOfRows: '100',
     ...params,
   });
   const url = `${BASE}/${service}/${endpoint}?${query.toString()}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`MFDS API HTTP ${res.status}: ${service}/${endpoint}`);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`[mfds] HTTP ${res.status}: ${service}/${endpoint}`);
+      return { items: [], totalCount: 0 };
+    }
+    const data = (await res.json()) as ApiResponse<T>;
+    if (data.header?.resultCode !== '00') {
+      console.warn(`[mfds] ${data.header?.resultMsg ?? 'unknown'}: ${service}/${endpoint}`);
+      return { items: [], totalCount: 0 };
+    }
+    return {
+      items: data.body?.items ?? [],
+      totalCount: data.body?.totalCount ?? 0,
+    };
+  } catch (err) {
+    console.warn(`[mfds] fetch failed for ${service}/${endpoint}:`, (err as Error).message);
+    return { items: [], totalCount: 0 };
   }
-  const data = (await res.json()) as ApiResponse<T>;
-  if (data.header?.resultCode !== '00') {
-    throw new Error(`MFDS API: ${data.header?.resultMsg || 'unknown error'}`);
-  }
-  return {
-    items: data.body?.items ?? [],
-    totalCount: data.body?.totalCount ?? 0,
-  };
 }
 
 export async function listEasyDrugs(pageNo = 1, numOfRows = 100) {

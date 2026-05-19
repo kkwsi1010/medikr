@@ -1,0 +1,29 @@
+name: Daily Data Refresh
+
+# 매일 06:00 KST (= 21:00 UTC 전날) 에 실행하여 medikr.kr 재빌드 트리거
+# 식약처 데이터가 빌드 시점에 fetch 되므로, 빈 commit + push 로 Cloudflare Pages 재빌드 유도
+on:
+  schedule:
+    - cron: '0 21 * * *'  # UTC 21:00 = KST 06:00 next day
+  workflow_dispatch:  # 수동 트리거도 가능
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "medikr-cron"
+          git config user.email "cron@medikr.kr"
+
+      - name: Empty commit to trigger Cloudflare Pages rebuild
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          git commit --allow-empty -m "chore(cron): daily MFDS data refresh — $DATE"
+          git push
