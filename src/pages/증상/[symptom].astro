@@ -1,0 +1,63 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { listEasyDrugs, type EasyDrug } from '../../lib/mfds';
+
+// 증상별 효능 키워드 매핑 — efcyQesitm 텍스트에서 검색
+const SYMPTOMS: { slug: string; label: string; keywords: string[] }[] = [
+  { slug: 'gamgi', label: '감기', keywords: ['감기', '기침', '콧물', '인후통'] },
+  { slug: 'duto', label: '두통', keywords: ['두통', '편두통'] },
+  { slug: 'wijang', label: '소화·위장', keywords: ['소화', '위장', '속쓰림', '식욕', '구역', '구토'] },
+  { slug: 'baltyeol', label: '발열·해열', keywords: ['발열', '열', '해열'] },
+  { slug: 'tongjeung', label: '통증', keywords: ['통증', '진통', '근육통', '관절통', '월경통'] },
+  { slug: 'almreugi', label: '알레르기', keywords: ['알레르기', '두드러기', '비염'] },
+  { slug: 'byunbi', label: '변비', keywords: ['변비', '배변'] },
+  { slug: 'seolssa', label: '설사', keywords: ['설사', '장염'] },
+  { slug: 'sumyeon', label: '수면', keywords: ['수면', '불면'] },
+  { slug: 'pibu', label: '피부', keywords: ['피부', '가려움', '습진', '여드름'] },
+];
+
+export async function getStaticPaths() {
+  const ALL: EasyDrug[] = [];
+  for (let p = 1; p <= 50; p++) {
+    const { items, totalCount } = await listEasyDrugs(p, 100);
+    ALL.push(...items);
+    if (items.length < 100 || p * 100 >= totalCount) break;
+  }
+  return SYMPTOMS.map((s) => {
+    const matches = ALL.filter((d) =>
+      s.keywords.some((k) => (d.efcyQesitm ?? '').includes(k))
+    ).slice(0, 100);
+    return {
+      params: { symptom: s.slug },
+      props: { symptom: s, drugs: matches },
+    };
+  });
+}
+
+interface Props {
+  symptom: { slug: string; label: string; keywords: string[] };
+  drugs: EasyDrug[];
+}
+const { symptom, drugs } = Astro.props;
+---
+<Layout
+  title={`${symptom.label}에 쓰는 약`}
+  description={`${symptom.label} 증상에 사용되는 의약품 ${drugs.length}종 — 식약처 공식 데이터`}
+>
+  <h2>{symptom.label} 증상에 쓰는 약</h2>
+  <p style="color:#666">총 <strong>{drugs.length}</strong>개 의약품. 효능에 "{symptom.keywords.join(', ')}" 키워드가 포함된 약을 모았습니다.</p>
+  <p style="color:#888;font-size:13px">⚠️ 본 목록은 정보 제공용이며, 실제 복용은 의사·약사 상담 후 결정하십시오.</p>
+
+  {drugs.length === 0 ? (
+    <p style="color:#888;font-style:italic">데이터가 아직 빌드되지 않았습니다. (MFDS_API_KEY 환경변수 설정 후 재배포 시 노출)</p>
+  ) : (
+    <ul>
+      {drugs.map((d) => (
+        <li style="margin:4px 0">
+          <a href={`/약/${d.itemSeq}`}>{d.itemName}</a>
+          {d.entpName && <span style="color:#666;font-size:13px"> — {d.entpName}</span>}
+        </li>
+      ))}
+    </ul>
+  )}
+</Layout>

@@ -1,0 +1,21 @@
+---
+// AdSense 광고 슬롯 컴포넌트 — env(PUBLIC_ADSENSE_CLIENT) 와 slot id 가 있을 때만 노출
+interface Props {
+  slot: string;        // ad slot id (AdSense 발급)
+  format?: string;     // 'auto' | 'fluid' | 'rectangle' etc
+  fullWidth?: boolean;
+}
+const { slot, format = 'auto', fullWidth = true } = Astro.props;
+const CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+---
+{CLIENT && slot && (
+  <ins
+    class="adsbygoogle"
+    style="display:block;margin:16px 0"
+    data-ad-client={CLIENT}
+    data-ad-slot={slot}
+    data-ad-format={format}
+    data-full-width-responsive={fullWidth ? 'true' : 'false'}
+  ></ins>
+  <script set:html={`(adsbygoogle = window.adsbygoogle || []).push({});`}></script>
+)}
