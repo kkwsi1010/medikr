@@ -7,8 +7,9 @@ export async function getStaticPaths() {
   const { SYMPTOMS } = await import('../../lib/symptoms');
   const { listEasyDrugs } = await import('../../lib/mfds');
 
+  // W1 라이브: 1,000 약. W5 에서 전체 확장.
   const ALL: EasyDrug[] = [];
-  for (let p = 1; p <= 50; p++) {
+  for (let p = 1; p <= 10; p++) {
     const { items, totalCount } = await listEasyDrugs(p, 100);
     ALL.push(...items);
     if (items.length < 100 || p * 100 >= totalCount) break;

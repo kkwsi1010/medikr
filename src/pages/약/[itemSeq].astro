@@ -10,16 +10,11 @@ import {
 } from '../../lib/mfds';
 
 export async function getStaticPaths() {
-  // W3 단계 — 500 페이지. W5: 5,000, W7: e약은요 전체 4,757 + 허가정보 마스터까지.
-  // 페이지당 추가로 pill/permit/taboos 3개 API 호출 (Promise.all) → 빌드 ~100s 예상.
-  const all: EasyDrug[] = [];
-  const PER = 100;
-  for (let pageNo = 1; pageNo <= 5; pageNo++) {
-    const { items, totalCount } = await listEasyDrugs(pageNo, PER);
-    all.push(...items);
-    if (items.length < PER || pageNo * PER >= totalCount) break;
-  }
-  return all.map((drug) => ({
+  // W1 라이브 단계 — Cloudflare Pages Free 빌드 한도(20분) 고려하여 100 페이지로 축소.
+  // 각 페이지가 추가 API 호출 3건 (pill/permit/taboos) 하므로 페이지당 3-4초 × 100 ≈ 7분.
+  // W5/W7 에서 cron 기반 점진 확장 또는 incremental build 도입 예정.
+  const { items } = await listEasyDrugs(1, 100);
+  return items.map((drug) => ({
     params: { itemSeq: drug.itemSeq },
     props: { drug },
   }));
