@@ -145,8 +145,14 @@ const drugJsonLd = {
 
   <article>
     <h2>{drug.itemName}</h2>
+    {permit?.ITEM_ENG_NAME && (
+      <p class="eng-name" style="color:var(--text-muted);font-size:14px;font-style:italic;margin:-6px 0 4px">
+        {permit.ITEM_ENG_NAME}
+      </p>
+    )}
     <p style="color:var(--text-muted);font-size:14px">
       {drug.entpName} · 품목코드 <code>{drug.itemSeq}</code>
+      {permit?.PRDUCT_PRMISN_NO && <> · 허가번호 <code>{permit.PRDUCT_PRMISN_NO}</code></>}
     </p>
 
     <div class="action-row">

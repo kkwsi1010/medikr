@@ -47,6 +47,7 @@ export type DrugPermit = {
   ITEM_PERMIT_DATE?: string;
   SPCLTY_PBLC?: string;
   PRDUCT_TYPE?: string;
+  PRDUCT_PRMISN_NO?: string;
   ITEM_INGR_NAME?: string;
   EDI_CODE?: string;
 };
