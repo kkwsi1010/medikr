@@ -1,0 +1,50 @@
+name: Weekly Q&A auto-generate (Claude API)
+
+# Claude API 로 매주 새 Q&A 5건 자동 생성 후 commit.
+# CLAUDE_API_KEY GitHub Secret 등록 시 작동. 없으면 step skip.
+
+on:
+  schedule:
+    - cron: '0 21 * * 0'  # 매주 일요일 21:00 UTC = 월요일 06:00 KST
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.CLAUDE_API_KEY != '' }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund @anthropic-ai/sdk
+
+      - name: Generate 5 new Q&A
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          node scripts/generate-qa.mjs
+
+      - name: Configure git
+        run: |
+          git config user.name "medikr-bot"
+          git config user.email "bot@medikr.kr"
+
+      - name: Commit if changed
+        run: |
+          if [[ -n $(git status --porcelain src/lib/qa-seed.ts) ]]; then
+            git add src/lib/qa-seed.ts
+            git commit -m "chore(qa): weekly auto Q&A generation"
+            git push
+          else
+            echo "No new Q&A generated"
+          fi
