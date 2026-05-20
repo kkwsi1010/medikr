@@ -22,21 +22,48 @@ export async function getStaticPaths() {
     }));
 }
 
-interface Props {
-  className: string;
-  drugs: EasyDrug[];
-}
+interface Props { className: string; drugs: EasyDrug[] }
 const { className, drugs } = Astro.props;
+
+// 분류별 일반 가이드 텍스트 자동 생성 (효능 키워드 빈도 분석)
+const efcyText = drugs.map((d) => d.efcyQesitm ?? '').join(' ');
+const commonKeywords: string[] = [];
+const KW = ['통증', '발열', '소화', '감기', '기침', '알레르기', '혈압', '당뇨', '콜레스테롤', '비염', '두통', '위장', '변비', '설사', '피부', '항생', '항암', '갑상선', '천식'];
+for (const k of KW) {
+  const count = (efcyText.match(new RegExp(k, 'g')) ?? []).length;
+  if (count >= Math.max(3, drugs.length * 0.1)) commonKeywords.push(k);
+}
+
+const otcDrugs = drugs.length;
+const sampleEntp = Array.from(new Set(drugs.map((d) => d.entpName).filter(Boolean))).slice(0, 5);
 ---
 <Layout
   title={`${className} 의약품`}
-  description={`${className}로 분류된 의약품 ${drugs.length}종`}
+  description={`${className}로 분류된 의약품 ${drugs.length}종 — 주요 효능: ${commonKeywords.slice(0, 3).join(', ')}`}
 >
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <a href="/분류">약효 분류</a> <span>›</span>
+    <span class="cur">{className}</span>
+  </nav>
+
   <h2>{className}</h2>
-  <p style="color:#666">이 약효 분류의 의약품 <strong>{drugs.length}종</strong></p>
+  <p class="cls-meta">총 <strong>{otcDrugs.toLocaleString()}종</strong>의 의약품 · 주요 효능 키워드: <strong>{commonKeywords.slice(0, 5).join(', ') || '—'}</strong></p>
 
   <AdSlot slot="4567890123" format="auto" />
 
+  <section class="cls-guide">
+    <h3>{className}에 관하여</h3>
+    <p>
+      <strong>{className}</strong>는 식약처 분류 체계에 따라 정리된 의약품군으로, medikr 에는 현재 <strong>{otcDrugs}개</strong>의 약이 등록되어 있습니다.
+      {commonKeywords.length > 0 && <span> 이 분류의 약들이 자주 다루는 효능은 <strong>{commonKeywords.slice(0, 3).join(', ')}</strong> 등입니다.</span>}
+    </p>
+    {sampleEntp.length > 0 && (
+      <p>주요 제조사: {sampleEntp.join(', ')} 외.</p>
+    )}
+    <p class="warn">의약품 사용 전 반드시 의사·약사 상담을 권장합니다. 같은 분류라도 성분·용량·적용 대상이 다를 수 있습니다.</p>
+  </section>
+
+  <h3>{className} 의약품 목록</h3>
   <ul class="drug-list">
     {drugs.map((d) => (
       <li>
@@ -46,3 +73,14 @@ const { className, drugs } = Astro.props;
     ))}
   </ul>
 </Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .cls-meta { color: var(--text-muted); }
+  .cls-guide { background: var(--bg-muted) !important; }
+  .cls-guide p { margin-bottom: 8px; }
+  .cls-guide p:last-child { margin-bottom: 0; }
+  .cls-guide .warn { color: var(--navy-800); font-size: 13px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid var(--accent); border-radius: 4px; margin-top: 12px; }
+</style>

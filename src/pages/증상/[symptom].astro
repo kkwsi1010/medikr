@@ -1,12 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AdSlot from '../../components/AdSlot.astro';
 import { type EasyDrug } from '../../lib/mfds';
 import { SYMPTOMS, type Symptom } from '../../lib/symptoms';
+import { QAS } from '../../lib/qa-seed';
 
 export async function getStaticPaths() {
   const { SYMPTOMS } = await import('../../lib/symptoms');
   const { prefetchAll } = await import('../../lib/mfds');
-
   const { drugs } = await prefetchAll();
   return SYMPTOMS.map((s) => {
     const matches = drugs
@@ -24,25 +25,65 @@ interface Props {
   drugs: EasyDrug[];
 }
 const { symptom, drugs } = Astro.props;
+
+const relatedQas = QAS.filter((qa) =>
+  qa.category === symptom.label.split('·')[0] ||
+  symptom.keywords.some((k) => qa.q.includes(k) || qa.a.includes(k))
+).slice(0, 3);
 ---
 <Layout
-  title={`${symptom.label}에 쓰는 약`}
+  title={`${symptom.label}에 쓰는 약 ${drugs.length}종`}
   description={`${symptom.label} 증상에 사용되는 의약품 ${drugs.length}종 — 식약처 공식 데이터`}
 >
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <a href="/증상">증상별</a> <span>›</span>
+    <span class="cur">{symptom.label}</span>
+  </nav>
+
   <h2>{symptom.label} 증상에 쓰는 약</h2>
-  <p style="color:#666">총 <strong>{drugs.length}</strong>개 의약품. 효능에 "{symptom.keywords.join(', ')}" 키워드가 포함된 약을 모았습니다.</p>
-  <p style="color:#888;font-size:13px">본 목록은 정보 제공용이며, 실제 복용은 의사·약사 상담 후 결정하십시오.</p>
+  <p class="cnt">총 <strong>{drugs.length}개</strong> 의약품 · 효능 키워드: {symptom.keywords.join(', ')}</p>
+
+  <AdSlot slot="9678901234" format="auto" />
+
+  <section class="warn-box">
+    <p><strong>증상이 지속되거나 심해지면 즉시 의료기관을 방문하세요.</strong> 본 목록은 식약처 e약은요 데이터에서 효능 키워드가 매칭된 약을 모은 것이며, 실제 복용 적합성은 의사·약사 판단이 필요합니다.</p>
+  </section>
 
   {drugs.length === 0 ? (
-    <p style="color:#888;font-style:italic">데이터가 아직 빌드되지 않았습니다.</p>
+    <p style="color:var(--text-light);font-style:italic">데이터가 아직 빌드되지 않았습니다.</p>
   ) : (
-    <ul>
+    <ul class="drug-list">
       {drugs.map((d) => (
-        <li style="margin:4px 0">
+        <li>
           <a href={`/약/${d.itemSeq}`}>{d.itemName}</a>
-          {d.entpName && <span style="color:#666;font-size:13px"> — {d.entpName}</span>}
+          {d.entpName && <span class="entp"> — {d.entpName}</span>}
         </li>
       ))}
     </ul>
   )}
+
+  {relatedQas.length > 0 && (
+    <section class="rel-qa">
+      <h3>{symptom.label} 관련 자주 묻는 질문</h3>
+      <ul>
+        {relatedQas.map((qa) => (
+          <li><a href={`/q/${qa.slug}`}>{qa.q}</a></li>
+        ))}
+      </ul>
+    </section>
+  )}
 </Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .cnt { color: var(--text-muted); }
+  .warn-box { background: #fef3c7 !important; border-left: 3px solid var(--accent) !important; border: 0; padding: 14px 18px; margin: 16px 0; }
+  .warn-box p { margin: 0; font-size: 14px; color: var(--navy-800); }
+  .rel-qa { background: var(--bg-muted) !important; }
+  .rel-qa ul { list-style: none; padding: 0; margin: 8px 0; }
+  .rel-qa li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .rel-qa li:last-child { border-bottom: 0; }
+  .rel-qa a { color: var(--navy-900); font-weight: 500; }
+</style>

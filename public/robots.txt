@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
 
+# Google AdSense bot
+User-agent: Mediapartners-Google
+Allow: /
+
+# Naver
+User-agent: Yeti
+Allow: /
+
 Sitemap: https://medikr.kr/sitemap-index.xml
+Sitemap: https://medikr.kr/api/sitemap-drugs.xml

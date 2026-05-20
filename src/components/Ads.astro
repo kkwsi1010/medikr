@@ -1,0 +1,38 @@
+---
+// 통합 광고 컴포넌트 — AdSense + 카카오 애드핏 + 쿠팡 파트너스
+// 각 광고는 env 기반으로 조건부 렌더
+interface Props {
+  slot?: string;          // AdSense slot
+  kakaoUnit?: string;     // 카카오 애드핏 unit id
+  format?: string;
+}
+const { slot, kakaoUnit, format = 'auto' } = Astro.props;
+
+const ADSENSE = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+const KAKAO_ENABLED = import.meta.env.PUBLIC_KAKAO_ADFIT_ENABLED === 'true';
+---
+{ADSENSE && slot && (
+  <>
+    <ins
+      class="adsbygoogle"
+      style="display:block;margin:16px 0"
+      data-ad-client={ADSENSE}
+      data-ad-slot={slot}
+      data-ad-format={format}
+      data-full-width-responsive="true"
+    ></ins>
+    <script set:html={`(adsbygoogle = window.adsbygoogle || []).push({});`}></script>
+  </>
+)}
+{KAKAO_ENABLED && kakaoUnit && (
+  <>
+    <ins
+      class="kakao_ad_area"
+      style="display:none;margin:16px 0"
+      data-ad-unit={kakaoUnit}
+      data-ad-width="320"
+      data-ad-height="100"
+    ></ins>
+    <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
+  </>
+)}
