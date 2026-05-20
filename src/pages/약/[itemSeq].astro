@@ -107,7 +107,13 @@ const matchedQas = QAS.filter((qa) => {
   return false;
 }).slice(0, 4);
 
+// 약 사진 fallback: e약은요 itemImage > 낱알식별 ITEM_IMAGE > 식약처 nedrug 직접 URL
+function buildNedrugImageUrl(itemSeq: string): string {
+  // 식약처 의약품안전나라의 일반적인 이미지 패턴 (보장 없음, 일부 약만)
+  return `https://nedrug.mfds.go.kr/pbp/cmn/itemImageDownload/${itemSeq}`;
+}
 const imageSrc = drug.itemImage || pill?.ITEM_IMAGE;
+const fallbackImageSrc = !imageSrc ? buildNedrugImageUrl(drug.itemSeq) : null;
 const metaDesc = (drug.efcyQesitm ?? `${drug.itemName} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 150);
 
 const breadcrumbList = {
@@ -159,7 +165,17 @@ const drugJsonLd = {
       <FavoriteButton itemSeq={drug.itemSeq} itemName={drug.itemName} />
     </div>
 
-    {imageSrc && <img src={imageSrc} alt={`${drug.itemName} 이미지`} loading="lazy" />}
+    {imageSrc ? (
+      <img src={imageSrc} alt={`${drug.itemName} 이미지`} loading="lazy" class="drug-photo" />
+    ) : fallbackImageSrc ? (
+      <img
+        src={fallbackImageSrc}
+        alt={`${drug.itemName} 이미지`}
+        loading="lazy"
+        class="drug-photo"
+        onerror="this.style.display='none'"
+      />
+    ) : null}
 
     <AdSlot slot="1234567890" format="auto" />
 

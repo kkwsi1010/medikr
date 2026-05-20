@@ -7,6 +7,10 @@ interface Props {
 
 const { title, description = '식약처 공식 데이터 기반 의약품 정보 검색', ogImage } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const path = Astro.url.pathname;
+function isActive(prefix: string): string {
+  return path === prefix || path.startsWith(prefix + '/') ? ' active' : '';
+}
 
 const GA4_ID = import.meta.env.PUBLIC_GA4_ID as string | undefined;
 const ADSENSE_CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
@@ -149,10 +153,18 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
       color: var(--navy-700); font-weight: 500; letter-spacing: -0.01em;
     }
     .site-nav a:hover { background: var(--navy-100); color: var(--navy-900); }
+    .site-nav a.active {
+      background: var(--navy-100); color: var(--navy-900);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
     .site-nav a.nav-highlight {
       background: var(--navy-900); color: #fff;
     }
     .site-nav a.nav-highlight:hover { background: var(--accent); color: #fff; }
+    .site-nav a.nav-highlight.active {
+      background: var(--accent); color: #fff;
+      box-shadow: inset 0 -2px 0 #fff;
+    }
 
     .header-search {
       flex: 1; min-width: 220px; max-width: 380px;
@@ -309,15 +321,15 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
         <ul id="hdr-sug" class="hdr-sug" hidden></ul>
       </form>
       <nav class="site-nav" id="site-nav" aria-label="주요 메뉴">
-        <a href="/처방분석" class="nav-highlight">처방분석</a>
-        <a href="/부작용검색">부작용</a>
-        <a href="/모양">알약식별</a>
-        <a href="/증상">증상</a>
-        <a href="/임부안전">임부</a>
-        <a href="/노인주의">노인</a>
-        <a href="/비교">비교</a>
-        <a href="/q">Q&A</a>
-        <a href="/즐겨찾기">즐겨찾기</a>
+        <a href="/처방분석" class={`nav-highlight${isActive('/처방분석')}`}>처방분석</a>
+        <a href="/부작용검색" class={isActive('/부작용검색').trim()}>부작용</a>
+        <a href="/모양" class={isActive('/모양').trim()}>알약식별</a>
+        <a href="/증상" class={isActive('/증상').trim()}>증상</a>
+        <a href="/임부안전" class={isActive('/임부안전').trim()}>임부</a>
+        <a href="/노인주의" class={isActive('/노인주의').trim()}>노인</a>
+        <a href="/비교" class={isActive('/비교').trim()}>비교</a>
+        <a href="/q" class={isActive('/q').trim()}>Q&A</a>
+        <a href="/즐겨찾기" class={isActive('/즐겨찾기').trim()}>즐겨찾기</a>
       </nav>
     </div>
   </header>
