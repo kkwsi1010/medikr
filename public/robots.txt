@@ -1,13 +1,88 @@
+# medikr.kr robots.txt
+# 일반 검색엔진 허용 / AI 학습 봇 차단 / AI 검색 봇은 일부 허용 (출처 트래픽)
+
+# ─── 일반 검색엔진 (허용) ─────────────────────────
 User-agent: *
 Allow: /
 
-# Google AdSense bot
+# Google AdSense 광고 크롤러
 User-agent: Mediapartners-Google
 Allow: /
 
-# Naver
+# Naver 크롤러
 User-agent: Yeti
 Allow: /
 
+# ─── AI 학습용 봇 (차단) ──────────────────────────
+# OpenAI GPT 학습
+User-agent: GPTBot
+Disallow: /
+
+# Google Gemini 학습
+User-agent: Google-Extended
+Disallow: /
+
+# Anthropic Claude 학습
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+# Common Crawl (AI 학습 데이터 풀)
+User-agent: CCBot
+Disallow: /
+
+# ByteDance (TikTok / Doubao)
+User-agent: Bytespider
+Disallow: /
+
+# Amazon AI
+User-agent: Amazonbot
+Disallow: /
+
+# Meta (LLaMA 학습)
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+# Cohere
+User-agent: cohere-ai
+Disallow: /
+
+# Diffbot
+User-agent: Diffbot
+Disallow: /
+
+# Omgili (BuzzSumo)
+User-agent: Omgilibot
+Disallow: /
+
+# ─── AI 검색 봇 (허용 — 출처 트래픽 유도) ─────────
+# OpenAI 검색 (ChatGPT Search) — 출처 링크 제공
+User-agent: OAI-SearchBot
+Allow: /
+
+# OpenAI ChatGPT 사용자 도구 — 실시간 검색
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity 검색 — 답변에 출처 인용
+User-agent: PerplexityBot
+Allow: /
+
+# You.com 검색
+User-agent: YouBot
+Allow: /
+
+# ─── 사이트맵 ─────────────────────────────────────
 Sitemap: https://medikr.kr/sitemap-index.xml
 Sitemap: https://medikr.kr/api/sitemap-drugs.xml
