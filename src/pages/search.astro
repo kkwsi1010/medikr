@@ -5,10 +5,10 @@ import { listEasyDrugs } from '../lib/mfds';
 type SearchItem = { itemSeq: string; itemName: string; entpName: string };
 
 // 빌드 시 약 인덱스 수집 (graceful — KEY 없으면 빈 배열)
-// W1 라이브: Cloudflare Pages 빌드 시간 단축 위해 1,000 약. W5 에서 전체 (4,757) 확장.
+// W4 단계: 전체 4,757 약 인덱스 (50 호출 × 100ms = 25초 추가, 부담 적음).
 const all: SearchItem[] = [];
 const PER = 100;
-const MAX_PAGES = 10;
+const MAX_PAGES = 50;
 for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
   const { items, totalCount } = await listEasyDrugs(pageNo, PER);
   for (const d of items) {

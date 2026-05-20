@@ -10,11 +10,17 @@ import {
 } from '../../lib/mfds';
 
 export async function getStaticPaths() {
-  // W1 라이브 단계 — Cloudflare Pages Free 빌드 한도(20분) 고려하여 100 페이지로 축소.
-  // 각 페이지가 추가 API 호출 3건 (pill/permit/taboos) 하므로 페이지당 3-4초 × 100 ≈ 7분.
-  // W5/W7 에서 cron 기반 점진 확장 또는 incremental build 도입 예정.
-  const { items } = await listEasyDrugs(1, 100);
-  return items.map((drug) => ({
+  // W4 단계 — 500 페이지로 확장. GitHub Actions 60min timeout 안.
+  // 페이지당 4 API 호출 × 평균 500ms = 2초/페이지 × 500 = ~17분 예상.
+  // Cloudflare Pages Direct Upload 방식이라 빌드 시간 제약은 GitHub Actions 만.
+  const all: EasyDrug[] = [];
+  const PER = 100;
+  for (let pageNo = 1; pageNo <= 5; pageNo++) {
+    const { items, totalCount } = await listEasyDrugs(pageNo, PER);
+    all.push(...items);
+    if (items.length < PER || pageNo * PER >= totalCount) break;
+  }
+  return all.map((drug) => ({
     params: { itemSeq: drug.itemSeq },
     props: { drug },
   }));

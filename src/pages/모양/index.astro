@@ -4,9 +4,9 @@ import { listEasyDrugs } from '../../lib/mfds';
 
 // 모양/색 인덱스 — 빌드 시 모든 약 메타 수집 후 클라이언트 필터
 type Item = { itemSeq: string; itemName: string; image?: string };
-// W1 라이브: 1,000 약. W5 에서 전체 확장.
+// W4 단계: 전체 4,757 약.
 const all: Item[] = [];
-for (let p = 1; p <= 10; p++) {
+for (let p = 1; p <= 50; p++) {
   const { items, totalCount } = await listEasyDrugs(p, 100);
   for (const d of items) {
     all.push({ itemSeq: d.itemSeq, itemName: d.itemName, image: d.itemImage });
