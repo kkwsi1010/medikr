@@ -2,8 +2,18 @@
 import Layout from '../layouts/Layout.astro';
 import { prefetchAll } from '../lib/mfds';
 
-const { drugs } = await prefetchAll();
-const recent = drugs.slice(0, 12);
+const { drugs, permitMap } = await prefetchAll();
+// 허가일자(ITEM_PERMIT_DATE, YYYYMMDD) 기준 최신순 정렬
+const recent = [...drugs]
+  .map((d) => ({ d, date: permitMap.get(d.itemSeq)?.ITEM_PERMIT_DATE ?? '' }))
+  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  .slice(0, 12)
+  .map((x) => ({ ...x.d, _date: x.date }));
+
+function fmtDate(d: string): string {
+  if (!d || d.length !== 8) return '';
+  return `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}`;
+}
 ---
 <Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 효능·부작용·병용금기 검색">
   <section class="hero">
@@ -55,7 +65,10 @@ const recent = drugs.slice(0, 12);
           <li>
             <a href={`/약/${d.itemSeq}`} class="drug-card">
               <span class="drug-name">{d.itemName}</span>
-              {d.entpName && <span class="drug-entp">{d.entpName}</span>}
+              <span class="drug-meta">
+                {d.entpName && <span class="drug-entp">{d.entpName}</span>}
+                {d._date && <span class="drug-date">{fmtDate(d._date)}</span>}
+              </span>
             </a>
           </li>
         ))}
@@ -183,7 +196,15 @@ const recent = drugs.slice(0, 12);
     color: var(--navy-900); font-weight: 600; font-size: 14px;
     line-height: 1.4; letter-spacing: -0.005em;
   }
-  .drug-entp { color: var(--text-muted); font-size: 12px; }
+  .drug-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; font-size: 12px;
+  }
+  .drug-entp { color: var(--text-muted); }
+  .drug-date {
+    color: var(--accent); font-weight: 600;
+    font-family: "SF Mono", Menlo, monospace; font-size: 11px;
+  }
 
   .about-box {
     background: var(--bg-muted) !important;
