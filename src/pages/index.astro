@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AdSlot from '../components/AdSlot.astro';
+import FreshBadge from '../components/FreshBadge.astro';
+import TrustBox from '../components/TrustBox.astro';
 import { prefetchAll } from '../lib/mfds';
 
-const { drugs, permitMap } = await prefetchAll();
-// 허가일자(ITEM_PERMIT_DATE, YYYYMMDD) 기준 최신순 정렬
+const { drugs, permitMap, pillMap } = await prefetchAll();
 const recent = [...drugs]
   .map((d) => ({ d, date: permitMap.get(d.itemSeq)?.ITEM_PERMIT_DATE ?? '' }))
   .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -15,75 +16,108 @@ function fmtDate(d: string): string {
   if (!d || d.length !== 8) return '';
   return `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}`;
 }
+
+// 통계
+const totalDrugs = drugs.length;
+const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)?.ITEM_IMAGE).length;
+const totalIngredients = new Set(
+  drugs.flatMap((d) => permitMap.get(d.itemSeq)?.ITEM_INGR_NAME?.split('/').map((s) => s.trim()).filter(Boolean) ?? [])
+).size;
 ---
-<Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 효능·부작용·병용금기 검색">
+<Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 처방분석·부작용 역검색·임부안전 도구 7종">
   <section class="hero">
-    <p class="eyebrow">식품의약품안전처 공식 데이터</p>
-    <h1>안전한 복용을 위한 <br />의약품 정보 사전</h1>
-    <p class="lead">{drugs.length.toLocaleString()}종 의약품의 효능·부작용·병용금기·성분 정보를 한 곳에서.</p>
-    <form action="/search" method="get" class="hero-search">
-      <input type="search" name="q" placeholder="예: 타이레놀, 게보린, 활명수…" autocomplete="off" />
-      <button type="submit">검색</button>
-    </form>
-    <p class="hero-meta">총 {drugs.length.toLocaleString()}종 · 매일 자동 갱신</p>
+    <div class="hero-content">
+      <p class="eyebrow">FOR YOUR SAFE MEDICATION</p>
+      <h1>약 정보, <br />이젠 도구로 찾는다</h1>
+      <p class="lead">식품의약품안전처 공식 데이터 {totalDrugs.toLocaleString()}종 — 처방전 병용금기 자동 검사, 증상으로 의심 약 찾기, 임신·노인 안전 가이드까지.</p>
+
+      <form action="/search" method="get" class="hero-search">
+        <input type="search" name="q" placeholder="약 이름·성분·증상으로 검색" autocomplete="off" />
+        <button type="submit" aria-label="검색">검색</button>
+      </form>
+
+      <div class="hero-stats">
+        <div><strong>{totalDrugs.toLocaleString()}</strong><span>의약품</span></div>
+        <div><strong>{totalIngredients.toLocaleString()}</strong><span>성분</span></div>
+        <div><strong>{withImageCount.toLocaleString()}</strong><span>알약 사진</span></div>
+        <div><strong>7</strong><span>전용 도구</span></div>
+      </div>
+    </div>
+    <FreshBadge />
   </section>
 
-  <section class="quick-links">
-    <a href="/처방분석" class="ql ql-feature">
-      <span class="ql-title">처방전 분석</span>
-      <span class="ql-desc">병용금기 자동 검사</span>
-    </a>
-    <a href="/부작용검색" class="ql ql-feature">
-      <span class="ql-title">부작용 역검색</span>
-      <span class="ql-desc">증상 → 의심 약</span>
-    </a>
-    <a href="/search" class="ql">
-      <span class="ql-title">이름으로</span>
-      <span class="ql-desc">약 이름·업체명</span>
-    </a>
-    <a href="/모양" class="ql">
-      <span class="ql-title">알약 식별</span>
-      <span class="ql-desc">모양·색·표기</span>
-    </a>
-    <a href="/증상" class="ql">
-      <span class="ql-title">증상별</span>
-      <span class="ql-desc">감기·두통·소화</span>
-    </a>
-    <a href="/임부안전" class="ql">
-      <span class="ql-title">임부 금기</span>
-      <span class="ql-desc">임신·수유 주의</span>
-    </a>
-    <a href="/노인주의" class="ql">
-      <span class="ql-title">노인 주의</span>
-      <span class="ql-desc">고령자 신중 복용</span>
-    </a>
-    <a href="/연령금기" class="ql">
-      <span class="ql-title">연령 금기</span>
-      <span class="ql-desc">소아·청소년</span>
-    </a>
-    <a href="/성분" class="ql">
-      <span class="ql-title">성분별</span>
-      <span class="ql-desc">같은 성분 묶음</span>
-    </a>
-    <a href="/분류" class="ql">
-      <span class="ql-title">약효 분류</span>
-      <span class="ql-desc">소화제·진통제</span>
-    </a>
-    <a href="/비교" class="ql">
-      <span class="ql-title">약 비교</span>
-      <span class="ql-desc">두 약 나란히</span>
-    </a>
-    <a href="/q" class="ql">
-      <span class="ql-title">Q&A</span>
-      <span class="ql-desc">자주 묻는 질문</span>
-    </a>
+  <section class="tool-section">
+    <div class="section-head">
+      <h2>전용 도구</h2>
+      <span class="section-sub">AI 가 못 대체하는 정확 데이터·인터랙티브</span>
+    </div>
+    <div class="tools-grid">
+      <a href="/처방분석" class="tool-card tool-feature">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7"/><path d="M9 7H5a2 2 0 0 0-2 2v2"/><circle cx="14" cy="11" r="6"/><path d="M14 11v3"/><path d="M14 8h.01"/></svg>
+        </div>
+        <strong>처방전 분석</strong>
+        <p>여러 약을 한 번에 입력하면 식약처 DUR 80만건 데이터에서 병용금기·상호작용 자동 검사</p>
+        <span class="tool-badge">대표 도구</span>
+      </a>
+      <a href="/부작용검색" class="tool-card">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v3M11 14h.01"/></svg>
+        </div>
+        <strong>부작용 역검색</strong>
+        <p>의심 증상으로 부작용 등록된 약 찾기</p>
+      </a>
+      <a href="/모양" class="tool-card">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        </div>
+        <strong>알약 식별</strong>
+        <p>모양·색·식별표기로 처방받은 약 찾기</p>
+      </a>
+      <a href="/비교" class="tool-card">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+        </div>
+        <strong>약 비교</strong>
+        <p>두 의약품 효능·부작용·성분 sideway 비교</p>
+      </a>
+      <a href="/임부안전" class="tool-card">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 0 0-18 9 9 0 0 0 0 18z"/><circle cx="12" cy="11" r="3"/></svg>
+        </div>
+        <strong>임부 금기</strong>
+        <p>임신·수유 중 절대 금기 약</p>
+      </a>
+      <a href="/노인주의" class="tool-card">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <strong>노인 주의</strong>
+        <p>고령자 신중 복용 의약품</p>
+      </a>
+    </div>
   </section>
 
   <AdSlot slot="9123450001" format="auto" />
 
-  <section class="recent-section">
+  <section class="content-section">
     <div class="section-head">
-      <h3>최근 등록 의약품</h3>
+      <h2>의약품 분류</h2>
+      <span class="section-sub">10,000+ 페이지의 의약품 사전</span>
+    </div>
+    <div class="cat-grid">
+      <a href="/search" class="cat-card"><strong>이름으로</strong><span>약 4,757종 검색</span></a>
+      <a href="/증상" class="cat-card"><strong>증상별</strong><span>감기·두통·소화 등 20개</span></a>
+      <a href="/성분" class="cat-card"><strong>성분별</strong><span>주성분으로 묶음</span></a>
+      <a href="/분류" class="cat-card"><strong>약효 분류</strong><span>식약처 표준 분류</span></a>
+      <a href="/제약사" class="cat-card"><strong>제약사별</strong><span>제조사로 검색</span></a>
+      <a href="/q" class="cat-card"><strong>Q&A</strong><span>자주 묻는 질문 30+</span></a>
+    </div>
+  </section>
+
+  <section class="content-section">
+    <div class="section-head">
+      <h2>최근 허가 의약품</h2>
       <a href="/search" class="see-more">전체 보기 →</a>
     </div>
     {recent.length > 0 ? (
@@ -105,122 +139,167 @@ function fmtDate(d: string): string {
     )}
   </section>
 
-  <section class="about-box">
-    <h3>medikr 는</h3>
-    <p>일반인이 처방받았거나 복용 중인 의약품 정보를 쉽게 찾을 수 있도록 만든 큐레이션 서비스입니다. 데이터는 <a href="https://www.data.go.kr/" rel="noopener" target="_blank">공공데이터포털</a> 의 식품의약품안전처 OpenAPI 를 통해 매일 06시 자동 갱신됩니다.</p>
-    <p class="caution"><strong>중요</strong>: 본 사이트의 정보는 의료 행위가 아니며, 처방·진단을 대체하지 않습니다. 복용·중단 결정은 반드시 의사·약사와 상의하십시오.</p>
-  </section>
+  <TrustBox />
 </Layout>
 
 <style>
   .hero {
-    background:
-      radial-gradient(circle at 80% -10%, rgba(180,83,9,0.15), transparent 50%),
-      linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #fff;
-    padding: 56px 32px 44px;
+    position: relative; overflow: hidden;
+    padding: 64px 32px 48px;
     border-radius: 16px;
-    margin-bottom: 20px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
+    margin-bottom: 24px;
+    color: #fff;
+    background:
+      radial-gradient(circle at 85% 15%, rgba(180,83,9,0.25), transparent 50%),
+      radial-gradient(circle at 15% 85%, rgba(2,132,199,0.15), transparent 40%),
+      linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    box-shadow: 0 20px 50px rgba(15,23,42,0.25);
   }
   .hero::before {
-    content: ''; position: absolute; inset: 0;
-    background: no-repeat right -40% top 50%/60% url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23ffffff' stroke-width='0.3' opacity='0.05'><circle cx='50' cy='50' r='40'/><circle cx='50' cy='50' r='30'/><circle cx='50' cy='50' r='20'/></svg>");
+    content: ''; position: absolute; inset: 0; opacity: 0.06;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px);
+    background-size: 32px 32px;
     pointer-events: none;
   }
-  .hero > * { position: relative; }
+  .hero-content { position: relative; max-width: 720px; }
   .eyebrow {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--accent-light); margin: 0 0 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+    color: var(--accent-light); margin: 0 0 16px;
   }
   .hero h1 {
     font-family: var(--serif); font-weight: 900;
-    font-size: 40px; line-height: 1.25; margin: 0 0 14px;
-    letter-spacing: -0.02em; color: #fff;
+    font-size: 46px; line-height: 1.15; margin: 0 0 18px;
+    letter-spacing: -0.025em; color: #fff;
   }
   .hero .lead {
-    font-size: 16px; opacity: 0.85; margin: 0 0 28px;
-    max-width: 480px; margin-left: auto; margin-right: auto;
+    font-size: 16px; opacity: 0.88; line-height: 1.7;
+    margin: 0 0 28px; max-width: 580px;
   }
   .hero-search {
-    display: flex; gap: 0; max-width: 520px; margin: 0 auto;
-    background: #fff; border-radius: 8px; overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    display: flex; max-width: 560px; gap: 0;
+    background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    margin-bottom: 36px;
   }
   .hero-search input {
-    flex: 1; padding: 14px 18px; border: 0;
-    font-size: 15px; font-family: var(--sans);
-    color: var(--text); background: transparent;
+    flex: 1; padding: 16px 20px; border: 0; font-size: 15px;
+    font-family: var(--sans); color: var(--text);
   }
   .hero-search input:focus { outline: none; }
   .hero-search button {
-    padding: 14px 28px; border: 0;
+    padding: 16px 32px; border: 0; cursor: pointer;
     background: var(--accent); color: #fff;
-    font-weight: 700; cursor: pointer; font-size: 14px;
-    letter-spacing: -0.005em; transition: background 0.15s;
+    font-weight: 800; font-size: 14px; letter-spacing: -0.005em;
+    font-family: var(--sans);
   }
   .hero-search button:hover { background: #92400e; }
-  .hero-meta {
-    margin: 18px 0 0; font-size: 12px; opacity: 0.6;
-    letter-spacing: 0.04em;
+
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    max-width: 600px;
+    background: rgba(0,0,0,0.2); border-radius: 10px;
+    padding: 4px; margin-bottom: 18px;
+  }
+  .hero-stats > div {
+    text-align: center; padding: 14px 8px;
+    background: rgba(255,255,255,0.05); border-radius: 8px;
+  }
+  .hero-stats strong {
+    display: block; font-family: var(--serif); font-weight: 800;
+    font-size: 24px; color: var(--accent-light); line-height: 1;
+  }
+  .hero-stats span {
+    display: block; margin-top: 4px; font-size: 11px;
+    color: rgba(255,255,255,0.7); letter-spacing: 0.04em;
   }
 
-  .quick-links {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px; margin: 24px 0;
-  }
-  .ql {
-    display: flex; flex-direction: column; gap: 4px;
-    padding: 20px 18px; background: var(--bg-card);
-    border: 1px solid var(--border); border-radius: 10px;
-    text-decoration: none; color: var(--text);
-    transition: all 0.2s ease;
-  }
-  .ql:hover {
-    border-color: var(--navy-800); transform: translateY(-3px);
-    box-shadow: var(--shadow-md); text-decoration: none;
-  }
-  .ql-title {
-    font-family: var(--serif); font-weight: 700;
-    color: var(--navy-900); font-size: 17px;
-  }
-  .ql-desc { color: var(--text-muted); font-size: 12.5px; }
-  .ql-feature {
-    background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
-    border-color: var(--navy-900);
-  }
-  .ql-feature .ql-title { color: #fff; }
-  .ql-feature .ql-desc { color: var(--accent-light); }
-  .ql-feature:hover { border-color: var(--accent); }
-
-  .recent-section { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
   .section-head {
     display: flex; justify-content: space-between; align-items: baseline;
-    margin: 28px 0 14px;
+    margin: 32px 0 14px; gap: 16px; flex-wrap: wrap;
   }
-  .section-head h3 {
-    margin: 0; padding: 0; border: 0; font-size: 20px; font-family: var(--serif);
+  .section-head h2 {
+    font-family: var(--serif); font-weight: 700;
+    font-size: 24px; margin: 0; color: var(--navy-900);
+    letter-spacing: -0.015em;
+  }
+  .section-sub {
+    color: var(--text-muted); font-size: 13px;
   }
   .see-more {
     font-size: 13px; color: var(--text-muted); font-weight: 500;
   }
   .see-more:hover { color: var(--accent); }
 
+  .tool-section { background: transparent !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; }
+  .tools-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .tool-card {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 20px 22px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 12px;
+    text-decoration: none; color: var(--text);
+    transition: all 0.2s ease; position: relative;
+  }
+  .tool-card:hover {
+    border-color: var(--navy-900); transform: translateY(-3px);
+    box-shadow: var(--shadow-md); text-decoration: none;
+  }
+  .tool-icon {
+    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-muted); border-radius: 10px; color: var(--navy-900);
+    margin-bottom: 4px;
+  }
+  .tool-card strong {
+    font-family: var(--serif); font-weight: 700;
+    color: var(--navy-900); font-size: 18px;
+  }
+  .tool-card p {
+    margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5;
+  }
+  .tool-feature {
+    background: linear-gradient(135deg, #0f172a, #1e3a8a);
+    border-color: var(--navy-900); color: #fff;
+    grid-column: span 2;
+  }
+  .tool-feature:hover { border-color: var(--accent); transform: translateY(-4px); }
+  .tool-feature strong { color: #fff; font-size: 22px; }
+  .tool-feature p { color: rgba(255,255,255,0.85); }
+  .tool-feature .tool-icon { background: rgba(255,255,255,0.1); color: var(--accent-light); }
+  .tool-badge {
+    position: absolute; top: 14px; right: 16px;
+    padding: 4px 10px; background: var(--accent); color: #fff;
+    border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  }
+
+  .content-section { background: transparent !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; }
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+  }
+  .cat-card {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 16px 18px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 8px;
+    text-decoration: none; color: var(--text); transition: all 0.15s;
+  }
+  .cat-card:hover { border-color: var(--navy-800); background: #fafaff; text-decoration: none; }
+  .cat-card strong { font-family: var(--serif); color: var(--navy-900); font-size: 15px; }
+  .cat-card span { color: var(--text-muted); font-size: 12px; }
+
   .drug-grid {
     list-style: none; padding: 0; margin: 0;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
   }
-  .drug-grid li { margin: 0; }
   .drug-card {
-    display: flex; flex-direction: column; gap: 3px;
+    display: flex; flex-direction: column; gap: 4px;
     padding: 14px 16px; background: var(--bg-card);
     border: 1px solid var(--border); border-radius: 8px;
-    text-decoration: none; transition: all 0.15s;
-    height: 100%;
+    text-decoration: none; transition: all 0.15s; height: 100%;
   }
   .drug-card:hover {
     border-color: var(--navy-800); transform: translateY(-2px);
@@ -239,23 +318,14 @@ function fmtDate(d: string): string {
     color: var(--accent); font-weight: 600;
     font-family: "SF Mono", Menlo, monospace; font-size: 11px;
   }
-
-  .about-box {
-    background: var(--bg-muted) !important;
-    border-color: var(--border-strong) !important;
-  }
-  .caution {
-    margin-top: 14px; padding: 12px 16px;
-    background: #fff7ed; border-left: 3px solid var(--accent);
-    border-radius: 4px; font-size: 14px; color: var(--navy-800);
-  }
   .muted { color: var(--text-light); font-style: italic; }
 
-  @media (max-width: 600px) {
-    .hero { padding: 36px 20px 32px; }
-    .hero h1 { font-size: 28px; }
-    .hero-search { flex-direction: column; gap: 0; }
-    .hero-search button { padding: 12px; }
-    .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  @media (max-width: 700px) {
+    .hero { padding: 40px 22px 32px; }
+    .hero h1 { font-size: 32px; }
+    .hero-search { flex-direction: column; }
+    .hero-search button { padding: 14px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .tool-feature { grid-column: auto; }
   }
 </style>

@@ -1,0 +1,63 @@
+---
+// 출처·신뢰 박스 — 도구·약 페이지 하단 공통
+---
+<aside class="trust-box">
+  <div class="trust-header">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
+      <path d="M9 12l2 2 4-4"/>
+    </svg>
+    <strong>데이터 출처</strong>
+  </div>
+  <ul class="trust-list">
+    <li>식품의약품안전처 의약품개요정보 (e약은요)</li>
+    <li>식품의약품안전처 의약품 제품 허가정보</li>
+    <li>식품의약품안전처 의약품 낱알식별 정보</li>
+    <li>식품의약품안전처 의약품안전사용서비스 (DUR)</li>
+  </ul>
+  <p class="trust-note">
+    공공누리 1유형 · <a href="https://www.data.go.kr/" rel="noopener" target="_blank">공공데이터포털</a> 의 OpenAPI 를 통해 매일 06:00 KST 자동 수집합니다.
+  </p>
+  <p class="trust-caution">
+    본 사이트는 식약처가 운영하는 사이트가 아닙니다. 정보 제공 목적이며 의료 행위·진단·처방을 대체하지 않습니다. 복용·중단 결정은 반드시 의사·약사와 상의하십시오.
+  </p>
+</aside>
+
+<style>
+  .trust-box {
+    background: linear-gradient(180deg, #fff, #fafaf7);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--navy-900);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 24px 0 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .trust-header {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--navy-900); margin-bottom: 10px;
+    font-family: var(--serif); font-size: 15px;
+  }
+  .trust-header svg { color: #059669; }
+  .trust-list {
+    list-style: none; padding: 0; margin: 0 0 12px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 4px 14px;
+  }
+  .trust-list li {
+    padding-left: 14px; position: relative; line-height: 1.5;
+    color: var(--text);
+  }
+  .trust-list li::before {
+    content: ''; position: absolute; left: 0; top: 8px;
+    width: 5px; height: 5px; background: #059669; border-radius: 50%;
+  }
+  .trust-note { margin: 8px 0; line-height: 1.6; }
+  .trust-caution {
+    margin: 8px 0 0; padding: 10px 14px;
+    background: #fffbeb; border-radius: 6px;
+    border-left: 2px solid var(--accent);
+    color: var(--navy-800); font-size: 12px; line-height: 1.6;
+  }
+</style>

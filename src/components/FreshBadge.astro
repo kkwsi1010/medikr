@@ -1,0 +1,49 @@
+---
+// 데이터 신선도 배지 — AI 학습 cutoff 보다 앞선다는 신뢰 시그널
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+const now = new Date();
+const formatted = now.toLocaleDateString('ko-KR', {
+  year: 'numeric', month: '2-digit', day: '2-digit',
+}).replace(/\. /g, '.').replace(/\.$/, '');
+---
+<div class={`fresh-badge ${compact ? 'compact' : ''}`}>
+  <span class="fresh-dot" aria-hidden="true"></span>
+  <span class="fresh-text">
+    {compact ? (
+      <>식약처 데이터 · {formatted}</>
+    ) : (
+      <>
+        <strong>식약처 공식 데이터</strong>
+        <span class="fresh-sub">매일 06:00 KST 자동 갱신 · 최종 빌드 {formatted}</span>
+      </>
+    )}
+  </span>
+</div>
+
+<style>
+  .fresh-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border: 1px solid #a7f3d0; border-radius: 8px;
+    font-size: 13px; color: #065f46;
+  }
+  .fresh-badge.compact {
+    padding: 4px 10px; font-size: 11px; gap: 6px;
+  }
+  .fresh-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+    animation: pulse 2s infinite;
+  }
+  .fresh-badge.compact .fresh-dot { width: 6px; height: 6px; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  .fresh-text { display: flex; flex-direction: column; line-height: 1.3; }
+  .fresh-badge.compact .fresh-text { flex-direction: row; gap: 4px; }
+  .fresh-text strong { font-weight: 700; }
+  .fresh-sub { font-size: 11px; opacity: 0.8; }
+</style>

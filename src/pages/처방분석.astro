@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AdSlot from '../components/AdSlot.astro';
+import FreshBadge from '../components/FreshBadge.astro';
+import TrustBox from '../components/TrustBox.astro';
 import { prefetchAll } from '../lib/mfds';
 
 const { drugs } = await prefetchAll();
@@ -11,8 +13,9 @@ const idx = drugs.map((d) => ({ s: d.itemSeq, n: d.itemName, e: d.entpName }));
   description={`처방받은 약 ${drugs.length}종 중에서 여러 개를 선택해 병용금기·상호작용 자동 매칭`}
 >
   <section class="intro">
+    <FreshBadge compact />
     <h2>처방전 분석기</h2>
-    <p>처방받은 약을 모두 입력하면 <strong>병용금기</strong> 와 <strong>상호작용 위험</strong> 을 자동으로 검사합니다. 식약처 DUR (의약품안전사용서비스) 80만건 데이터 기반.</p>
+    <p>처방받은 약을 모두 입력하면 <strong>병용금기</strong> 와 <strong>상호작용 위험</strong> 을 자동으로 검사합니다. 식약처 DUR (의약품안전사용서비스) <strong>80만건</strong> 데이터 기반.</p>
     <p class="warn">정보 제공 목적이며, 의사·약사 상담을 대체하지 않습니다.</p>
   </section>
 
@@ -34,6 +37,8 @@ const idx = drugs.map((d) => ({ s: d.itemSeq, n: d.itemName, e: d.entpName }));
     <div id="rx-summary"></div>
     <div id="rx-conflicts"></div>
   </section>
+
+  <TrustBox />
 
   <script type="application/json" id="rx-index" set:html={JSON.stringify(idx)}></script>
 
