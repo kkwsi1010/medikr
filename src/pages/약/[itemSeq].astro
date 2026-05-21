@@ -18,6 +18,9 @@ import entpIdx from '../../data/entp-idx.json';
 const { itemSeq } = Astro.params;
 if (!itemSeq) return Astro.redirect('/search', 302);
 
+// 디버그 모드 ?debug=1 — process.env / fetch 결과 확인
+const isDebug = Astro.url.searchParams.get('debug') === '1';
+
 // 식약처 API 3건 병렬 fetch — drug 가 null 이면 404
 const [drug, pill, permit, taboos] = await Promise.all([
   getEasyDrug(itemSeq),
@@ -25,6 +28,22 @@ const [drug, pill, permit, taboos] = await Promise.all([
   getDrugPermit(itemSeq),
   getDurTaboos(itemSeq).catch(() => []),
 ]);
+
+if (isDebug) {
+  return new Response(JSON.stringify({
+    itemSeq,
+    hasProcessEnv: typeof process !== 'undefined',
+    procEnvMFDS: typeof process !== 'undefined' && Boolean(process.env?.MFDS_API_KEY),
+    drug_present: Boolean(drug),
+    drug_name: drug?.itemName,
+    pill_present: Boolean(pill),
+    permit_present: Boolean(permit),
+    taboos_count: taboos.length,
+  }, null, 2), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
 
 if (!drug) {
   return new Response('Drug not found', { status: 404 });
