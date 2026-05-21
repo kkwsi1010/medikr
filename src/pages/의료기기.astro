@@ -1,33 +1,50 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
+import { fetchAllMedicalDevices } from '../lib/mfds';
+
+const items = await fetchAllMedicalDevices().catch(() => []);
 ---
 <Layout
   title="의료기기 정보"
-  description="식약처 공식 의료기기 품목정보·허가 데이터"
+  description={`식약처 공식 의료기기 ${items.length.toLocaleString()}건 — 품목·등급·제조사·허가일`}
 >
   <nav class="crumb" aria-label="breadcrumb">
-    <a href="/">홈</a> <span>›</span> <span class="cur">의료기기 정보</span>
+    <a href="/">홈</a> <span>›</span> <span class="cur">의료기기</span>
   </nav>
 
   <FreshBadge compact />
   <h2>의료기기 정보</h2>
-  <p class="meta">식약처 공식 의료기기 품목정보 — 허가일·등급·제조사·사용 목적·유효기간.</p>
+  <p class="meta">식약처 공식 의료기기 품목정보 — 허가일·등급·제조사·사용목적.</p>
 
-  <section class="coming">
-    <h3>데이터 준비 중</h3>
-    <p>식약처 의료기기 OpenAPI 활용신청 후 자동 갱신됩니다.</p>
-    <ul>
-      <li><strong>의료기기 품목 정보</strong> — 제품일련번호·제조방법·사용목적·유효기간·허가정보</li>
-      <li><strong>허가/회수 이력</strong> — 등급·분류·제조위탁·제조국가</li>
-      <li><strong>모델 분류</strong> — 일반·전문 의료기기</li>
-    </ul>
-    <p>예상 페이지 수: 약 3만+</p>
-  </section>
+  <AdSlot slot="9000000002" format="auto" />
+
+  {items.length > 0 ? (
+    <section>
+      <h3>등록 의료기기 ({items.length.toLocaleString()}건)</h3>
+      <ul class="prod-list">
+        {items.slice(0, 100).map((p) => (
+          <li>
+            <strong>{p.PRDT_NM || p.ITEM_NAME || p.PRODUCT_NAME || '품목명 미상'}</strong>
+            {(p.ENTP_NAME || p.MNF_NM) && <span class="entp"> — {p.ENTP_NAME || p.MNF_NM}</span>}
+            {p.GRADE && <span class="grade">{p.GRADE}등급</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ) : (
+    <section class="coming">
+      <h3>데이터 활성화 대기 중</h3>
+      <p>식약처 의료기기 OpenAPI 활용신청 + 정확한 endpoint 등록 후 자동 노출.</p>
+      <p>data.go.kr/data/15073906/openapi.do</p>
+    </section>
+  )}
 
   <TrustBox />
 </Layout>
+
 <style>
   .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
   .crumb a { color: var(--text-muted); }
@@ -35,6 +52,8 @@ import TrustBox from '../components/TrustBox.astro';
   .meta { color: var(--text-muted); margin-bottom: 16px; }
   .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
   .coming h3 { margin-top: 0; }
-  .coming ul { padding-left: 22px; margin: 12px 0; }
-  .coming li { margin-bottom: 6px; }
+  .prod-list { list-style: none; padding: 0; }
+  .prod-list li { padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 4px; }
+  .prod-list .entp { color: var(--text-muted); font-size: 13px; }
+  .grade { display: inline-block; background: var(--navy-100); color: var(--navy-900); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
 </style>

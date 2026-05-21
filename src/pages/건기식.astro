@@ -1,11 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
+import { fetchAllHealthFunctionalFoods } from '../lib/mfds';
+
+const items = await fetchAllHealthFunctionalFoods().catch(() => []);
 ---
 <Layout
   title="건강기능식품 정보"
-  description="식약처 공식 건강기능식품 품목·영양 데이터"
+  description={`식약처 공식 건강기능식품 ${items.length.toLocaleString()}건 — 제품·성분·기능성`}
 >
   <nav class="crumb" aria-label="breadcrumb">
     <a href="/">홈</a> <span>›</span> <span class="cur">건강기능식품</span>
@@ -13,18 +17,29 @@ import TrustBox from '../components/TrustBox.astro';
 
   <FreshBadge compact />
   <h2>건강기능식품 정보</h2>
-  <p class="meta">식약처 공식 건강기능식품 품목정보 — 회사·제품명·외관·섭취방법·유통기한·영양성분.</p>
+  <p class="meta">식약처 공식 건강기능식품 품목 — 제품·섭취방법·기능성·영양성분.</p>
 
-  <section class="coming">
-    <h3>데이터 준비 중</h3>
-    <p>식약처 건강기능식품 OpenAPI 활용신청 후 자동 갱신됩니다.</p>
-    <ul>
-      <li><strong>건강기능식품 품목정보</strong> — 회사명·제품명·제조관리번호·섭취방법·유통기한</li>
-      <li><strong>건강기능식품 영양 DB</strong> — 영양성분·함량</li>
-      <li><strong>기능성 원료</strong> — 인정 기능성</li>
-    </ul>
-    <p>예상 페이지 수: 약 3만+</p>
-  </section>
+  <AdSlot slot="9000000003" format="auto" />
+
+  {items.length > 0 ? (
+    <section>
+      <h3>등록 건강기능식품 ({items.length.toLocaleString()}건)</h3>
+      <ul class="prod-list">
+        {items.slice(0, 100).map((p) => (
+          <li>
+            <strong>{p.PRDT_NM || p.PRODUCT_NAME || p.ITEM_NAME || '품목명 미상'}</strong>
+            {(p.ENTP_NAME || p.MNF_NM || p.BSSH_NM) && <span class="entp"> — {p.ENTP_NAME || p.MNF_NM || p.BSSH_NM}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ) : (
+    <section class="coming">
+      <h3>데이터 활성화 대기 중</h3>
+      <p>식약처 건강기능식품 OpenAPI 활용신청 + 정확한 endpoint 등록 후 자동 노출.</p>
+      <p>data.go.kr/data/15056760/openapi.do</p>
+    </section>
+  )}
 
   <TrustBox />
 </Layout>
@@ -36,6 +51,7 @@ import TrustBox from '../components/TrustBox.astro';
   .meta { color: var(--text-muted); margin-bottom: 16px; }
   .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
   .coming h3 { margin-top: 0; }
-  .coming ul { padding-left: 22px; margin: 12px 0; }
-  .coming li { margin-bottom: 6px; }
+  .prod-list { list-style: none; padding: 0; }
+  .prod-list li { padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 4px; }
+  .prod-list .entp { color: var(--text-muted); font-size: 13px; }
 </style>

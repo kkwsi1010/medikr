@@ -1,11 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
+import { fetchAllHerbalMedicines } from '../lib/mfds';
+
+const items = await fetchAllHerbalMedicines().catch(() => []);
 ---
 <Layout
   title="한약(생약) 정보"
-  description="식약처 공식 한약·생약 약재 정보"
+  description={`식약처 공식 한약·생약 약재 ${items.length.toLocaleString()}건`}
 >
   <nav class="crumb" aria-label="breadcrumb">
     <a href="/">홈</a> <span>›</span> <span class="cur">한약(생약)</span>
@@ -13,19 +17,29 @@ import TrustBox from '../components/TrustBox.astro';
 
   <FreshBadge compact />
   <h2>한약(생약) 정보</h2>
-  <p class="meta">식약처 공식 한약·생약 약재 정보 — 기원·효능·주의사항.</p>
+  <p class="meta">식약처 공식 한약·생약 약재 — 기원·효능·주의사항.</p>
 
-  <section class="coming">
-    <h3>데이터 준비 중</h3>
-    <p>식약처 한약(생약) OpenAPI 활용신청 후 자동 갱신됩니다.</p>
-    <ul>
-      <li><strong>약재명 / 학명</strong></li>
-      <li><strong>기원 식물·동물·광물</strong></li>
-      <li><strong>효능군 / 주의사항</strong></li>
-      <li><strong>약전 등재 여부</strong></li>
-    </ul>
-    <p>예상 페이지 수: 약 수천</p>
-  </section>
+  <AdSlot slot="9000000004" format="auto" />
+
+  {items.length > 0 ? (
+    <section>
+      <h3>등록 약재 ({items.length.toLocaleString()}건)</h3>
+      <ul class="prod-list">
+        {items.slice(0, 100).map((p) => (
+          <li>
+            <strong>{p.HRBL_NAME || p.ITEM_NAME || p.NAME || '약재명 미상'}</strong>
+            {p.SCIENTIFIC_NAME && <span class="sci"> — {p.SCIENTIFIC_NAME}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ) : (
+    <section class="coming">
+      <h3>데이터 활성화 대기 중</h3>
+      <p>식약처 한약(생약) OpenAPI 활용신청 + endpoint 등록 후 자동 노출.</p>
+      <p>data.go.kr/data/15076330/openapi.do</p>
+    </section>
+  )}
 
   <TrustBox />
 </Layout>
@@ -37,6 +51,7 @@ import TrustBox from '../components/TrustBox.astro';
   .meta { color: var(--text-muted); margin-bottom: 16px; }
   .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
   .coming h3 { margin-top: 0; }
-  .coming ul { padding-left: 22px; margin: 12px 0; }
-  .coming li { margin-bottom: 6px; }
+  .prod-list { list-style: none; padding: 0; }
+  .prod-list li { padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 4px; }
+  .prod-list .sci { color: var(--text-muted); font-size: 13px; font-style: italic; }
 </style>

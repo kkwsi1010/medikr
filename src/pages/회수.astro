@@ -1,11 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
+import { fetchAllRecalls } from '../lib/mfds';
+
+const items = await fetchAllRecalls().catch(() => []);
 ---
 <Layout
   title="회수·판매중지 정보"
-  description="식약처 공식 식품·의약품 회수 및 판매중지 정보"
+  description={`식약처 식품·의약품 회수 ${items.length.toLocaleString()}건 — 매일 06시 자동 갱신`}
 >
   <nav class="crumb" aria-label="breadcrumb">
     <a href="/">홈</a> <span>›</span> <span class="cur">회수·판매중지</span>
@@ -13,19 +17,37 @@ import TrustBox from '../components/TrustBox.astro';
 
   <FreshBadge compact />
   <h2>회수·판매중지 정보</h2>
-  <p class="meta">식약처가 공시한 식품·의약품·의료기기·화장품의 회수 및 판매중지 정보. 매일 자동 갱신.</p>
+  <p class="meta">식약처 공시 회수·판매중지 — 매일 자동 갱신. AI 학습 cutoff 보다 빠른 신선 데이터.</p>
 
-  <section class="coming">
-    <h3>데이터 준비 중</h3>
-    <p>식약처 회수·판매중지 OpenAPI 활용신청 후 자동 갱신됩니다.</p>
-    <ul>
-      <li><strong>식품 회수·판매중지</strong> — 제품명·회수 사유·등급·일자</li>
-      <li><strong>수입식품 회수</strong></li>
-      <li><strong>의약품 회수·판매중지</strong></li>
-      <li><strong>해외 위해식품 회수</strong></li>
-    </ul>
-    <p>시기성 콘텐츠 — AI 학습 cutoff 보다 빠른 신선 데이터로 SEO 강점.</p>
-  </section>
+  <AdSlot slot="9000000005" format="auto" />
+
+  {items.length > 0 ? (
+    <section>
+      <h3>최근 회수·판매중지 ({items.length.toLocaleString()}건)</h3>
+      <ul class="recall-list">
+        {items.slice(0, 100).map((p) => (
+          <li>
+            <strong>{p.PRDT_NM || p.PRDLST_NM || p.ITEM_NAME || '품목명 미상'}</strong>
+            {(p.RTRVL_CN || p.RECALL_REASON || p.REASON) && (
+              <div class="reason">{p.RTRVL_CN || p.RECALL_REASON || p.REASON}</div>
+            )}
+            {(p.RTRVL_DT || p.RECALL_DATE || p.DATE) && (
+              <div class="date">{p.RTRVL_DT || p.RECALL_DATE || p.DATE}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ) : (
+    <section class="coming">
+      <h3>데이터 활성화 대기 중</h3>
+      <p>식약처 회수·판매중지 OpenAPI 활용신청 + endpoint 등록 후 자동 노출.</p>
+      <ul>
+        <li>식품 회수·판매중지 (data.go.kr/data/15074318)</li>
+        <li>의약품 회수·판매중지 (15059114)</li>
+      </ul>
+    </section>
+  )}
 
   <TrustBox />
 </Layout>
@@ -38,5 +60,13 @@ import TrustBox from '../components/TrustBox.astro';
   .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
   .coming h3 { margin-top: 0; }
   .coming ul { padding-left: 22px; margin: 12px 0; }
-  .coming li { margin-bottom: 6px; }
+  .recall-list { list-style: none; padding: 0; }
+  .recall-list li {
+    padding: 14px 18px; background: #fff;
+    border: 1px solid var(--border); border-left: 3px solid #dc2626;
+    border-radius: 6px; margin-bottom: 6px;
+  }
+  .recall-list strong { color: var(--navy-900); }
+  .recall-list .reason { color: var(--text); font-size: 13px; margin-top: 4px; }
+  .recall-list .date { color: var(--text-muted); font-size: 12px; margin-top: 2px; font-family: "SF Mono", monospace; }
 </style>
