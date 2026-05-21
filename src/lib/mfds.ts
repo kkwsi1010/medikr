@@ -286,11 +286,13 @@ export function fetchAllCosmeticIngredients(): Promise<GenericProduct[]> {
   return _cosmeticIngredientCache;
 }
 
-// 의료기기 (15073906) — 사용자 신청 결과 대기, TODO
+// 의료기기 (15073906) — 정정 완료
 let _mdCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllMedicalDevices(): Promise<GenericProduct[]> {
   if (_mdCache) return _mdCache;
-  _mdCache = fetchAll<GenericProduct>('MdcinInfoService01', 'getMdcinInfoList01', {}, 300);
+  _mdCache = fetchAll<GenericProduct>(
+    'MdeqPrdlstInfoService02', 'getMdeqPrdlstInfoInq02', {}, 300
+  );
   return _mdCache;
 }
 
@@ -323,13 +325,38 @@ export function fetchAllDrugRecalls(): Promise<GenericProduct[]> {
   return _drugRecallCache;
 }
 
-// 식품 회수 (15074318) — 사용자 신청 결과 대기, TODO
+// 식품 회수 (15074318, I0490) — 식품안전나라 API (별도 도메인 + 별도 URL 패턴)
+// URL: http://openapi.foodsafetykorea.go.kr/api/{KEY}/I0490/json/{startIdx}/{endIdx}
+// 인증키: 식약처 일반 키와 같은 키 일 수도, 별도 일 수도 (시도 후 확인)
+const FOODSAFETY_BASE = 'http://openapi.foodsafetykorea.go.kr/api';
+
+async function fetchFoodSafetyApi(serviceId: string, perPage = 100, maxPages = 50): Promise<GenericProduct[]> {
+  if (!HAS_KEY) return [];
+  const all: GenericProduct[] = [];
+  for (let page = 0; page < maxPages; page++) {
+    const start = page * perPage + 1;
+    const end = start + perPage - 1;
+    try {
+      const res = await fetch(`${FOODSAFETY_BASE}/${KEY}/${serviceId}/json/${start}/${end}`);
+      if (!res.ok) break;
+      const data = await res.json();
+      const block = data[serviceId];
+      if (!block) break;
+      const rows = block.row;
+      if (!rows || rows.length === 0) break;
+      all.push(...rows);
+      if (rows.length < perPage) break;
+    } catch {
+      break;
+    }
+  }
+  return all;
+}
+
 let _foodRecallCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllRecalls(): Promise<GenericProduct[]> {
   if (_foodRecallCache) return _foodRecallCache;
-  _foodRecallCache = fetchAll<GenericProduct>(
-    'FoodRecallInfoService01', 'getFoodRecallInfoList01', {}, 100
-  );
+  _foodRecallCache = fetchFoodSafetyApi('I0490', 100, 50);
   return _foodRecallCache;
 }
 

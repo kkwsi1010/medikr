@@ -29,18 +29,21 @@ const items = [...drugRecalls, ...foodRecalls];
     <section>
       <h3>최근 회수·판매중지 ({items.length.toLocaleString()}건)</h3>
       <ul class="recall-list">
-        {items.slice(0, 100).map((p) => (
+        {items.slice(0, 200).map((p) => (
           <li>
-            <strong>{p.PRDT_NM || p.PRDLST_NM || p.ITEM_NAME || '품목명 미상'}</strong>
-            {(p.RTRVL_CN || p.RECALL_REASON || p.REASON) && (
-              <div class="reason">{p.RTRVL_CN || p.RECALL_REASON || p.REASON}</div>
+            <strong>{p.PRDTNM || p.PRDT_NM || p.PRDLST_NM || p.ITEM_NAME || '품목명 미상'}</strong>
+            {(p.BSSHNM || p.ENTP_NAME) && <span class="entp"> — {p.BSSHNM || p.ENTP_NAME}</span>}
+            {(p.RTRVLPRVNS || p.RTRVL_CN || p.RECALL_REASON || p.REASON) && (
+              <div class="reason">{p.RTRVLPRVNS || p.RTRVL_CN || p.RECALL_REASON || p.REASON}</div>
             )}
-            {(p.RTRVL_DT || p.RECALL_DATE || p.DATE) && (
-              <div class="date">{p.RTRVL_DT || p.RECALL_DATE || p.DATE}</div>
+            {(p.CRET_DTM || p.RTRVL_DT || p.RECALL_DATE || p.DATE) && (
+              <div class="date">{p.CRET_DTM || p.RTRVL_DT || p.RECALL_DATE || p.DATE}</div>
             )}
+            {p.RTRVL_GRDCD_NM && <span class="grade">{p.RTRVL_GRDCD_NM}</span>}
           </li>
         ))}
       </ul>
+      {items.length > 200 && <p class="more">총 {items.length.toLocaleString()}건 중 200건 표시</p>}
     </section>
   ) : (
     <section class="coming">
@@ -73,4 +76,7 @@ const items = [...drugRecalls, ...foodRecalls];
   .recall-list strong { color: var(--navy-900); }
   .recall-list .reason { color: var(--text); font-size: 13px; margin-top: 4px; }
   .recall-list .date { color: var(--text-muted); font-size: 12px; margin-top: 2px; font-family: "SF Mono", monospace; }
+  .recall-list .entp { color: var(--text-muted); font-size: 13px; margin-left: 6px; }
+  .recall-list .grade { display: inline-block; background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+  .more { text-align: center; color: var(--text-muted); margin-top: 12px; font-size: 13px; }
 </style>
