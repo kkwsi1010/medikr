@@ -404,12 +404,12 @@ export function prefetchAll(): Promise<PrefetchCache> {
   _prefetch = (async () => {
     console.log('[mfds prefetch] e약은요 + 낱알식별 + 허가정보 다운로드 시작...');
     const t0 = Date.now();
-    // D 옵션 (hybrid SSR) 적용: [itemSeq] 는 SSR 이라 prerender 5만개 안 함
-    // prefetchAll 은 색인용 (성분/분류/제약사 페이지) — 전체 데이터 필요
+    // D 옵션 (hybrid SSR): prefetchAll 은 정적 dynamic 페이지 (성분/분류/제약사/[slug]) 가 사용
+    // 정적 페이지 수 줄이려고 500 약만. 약 [itemSeq] SSR 은 별도 색인 (5만 약) lookup.
     const [drugs, pills, permits] = await Promise.all([
-      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 60),
-      fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 30),
-      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 60),
+      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 5),
+      fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 5),
+      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 5),
     ]);
     const drugMap = new Map(drugs.map((d) => [d.itemSeq, d]));
     const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
