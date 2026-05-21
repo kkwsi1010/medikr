@@ -166,20 +166,55 @@ export async function fetchAll<T>(
   service: string,
   endpoint: string,
   extra: Record<string, string> = {},
-  maxPages = 500
+  maxPages = 500,
+  baseOverride?: string
 ): Promise<T[]> {
   const all: T[] = [];
   const PER = 100;
   for (let pageNo = 1; pageNo <= maxPages; pageNo++) {
-    const { items, totalCount } = await fetchApi<T>(service, endpoint, {
-      ...extra,
-      pageNo: String(pageNo),
-      numOfRows: String(PER),
-    });
+    const { items, totalCount } = await fetchApiWithBase<T>(
+      baseOverride ?? BASE,
+      service,
+      endpoint,
+      {
+        ...extra,
+        pageNo: String(pageNo),
+        numOfRows: String(PER),
+      }
+    );
     all.push(...items);
     if (items.length < PER || pageNo * PER >= totalCount) break;
   }
   return all;
+}
+
+async function fetchApiWithBase<T>(
+  base: string,
+  service: string,
+  endpoint: string,
+  params: Record<string, string> = {}
+): Promise<{ items: T[]; totalCount: number }> {
+  if (!HAS_KEY) return { items: [], totalCount: 0 };
+  const query = new URLSearchParams({
+    serviceKey: KEY!,
+    type: 'json',
+    pageNo: '1',
+    numOfRows: '100',
+    ...params,
+  });
+  const url = `${base}/${service}/${endpoint}?${query.toString()}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return { items: [], totalCount: 0 };
+    const data = (await res.json()) as ApiResponse<T>;
+    if (data.header?.resultCode !== '00') return { items: [], totalCount: 0 };
+    return {
+      items: data.body?.items ?? [],
+      totalCount: data.body?.totalCount ?? 0,
+    };
+  } catch {
+    return { items: [], totalCount: 0 };
+  }
 }
 
 // DUR 카테고리별 전체 fetch (페이지별 prefetch)
@@ -221,52 +256,91 @@ export function fetchAllAgeTaboos(): Promise<DurEntry[]> {
 
 export type GenericProduct = Record<string, string>;
 
+// 화장품 제조판매업 (15020628) — 정정 완료
 let _cosmeticCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllCosmetics(): Promise<GenericProduct[]> {
   if (_cosmeticCache) return _cosmeticCache;
-  // TODO: 15020628 endpoint 정정
-  _cosmeticCache = fetchAll<GenericProduct>('CsmtcsMfcrtrInfoService01', 'getCsmtcsMfcrtrInfoList01', {}, 100);
+  _cosmeticCache = fetchAll<GenericProduct>(
+    'CsmtcsMfcrtrInfoService01', 'getCsmtcsMfcrtrInfoList01', {}, 100
+  );
   return _cosmeticCache;
 }
 
+// 기능성화장품 보고품목 (15095680) — 정정 완료
 let _functionalCosmeticCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllFunctionalCosmetics(): Promise<GenericProduct[]> {
   if (_functionalCosmeticCache) return _functionalCosmeticCache;
-  // TODO: 15095680 endpoint 정정
-  _functionalCosmeticCache = fetchAll<GenericProduct>('CsmtcsFnctlPrdtInfoService01', 'getCsmtcsFnctlPrdtInfoList01', {}, 50);
+  _functionalCosmeticCache = fetchAll<GenericProduct>(
+    'FtnltCosmRptPrdlstInfoService', 'getRptPrdlstInq', {}, 50
+  );
   return _functionalCosmeticCache;
 }
 
+// 화장품 원료성분정보 (15111774) — 신규
+let _cosmeticIngredientCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllCosmeticIngredients(): Promise<GenericProduct[]> {
+  if (_cosmeticIngredientCache) return _cosmeticIngredientCache;
+  _cosmeticIngredientCache = fetchAll<GenericProduct>(
+    'CsmtcsIngdCpntInfoService01', 'getCsmtcsIngdCpntInfoService01', {}, 100
+  );
+  return _cosmeticIngredientCache;
+}
+
+// 의료기기 (15073906) — 사용자 신청 결과 대기, TODO
 let _mdCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllMedicalDevices(): Promise<GenericProduct[]> {
   if (_mdCache) return _mdCache;
-  // TODO: 15073906 endpoint 정정
   _mdCache = fetchAll<GenericProduct>('MdcinInfoService01', 'getMdcinInfoList01', {}, 300);
   return _mdCache;
 }
 
+// 건강기능식품 (15056760) — 정정 완료
 let _htfsCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllHealthFunctionalFoods(): Promise<GenericProduct[]> {
   if (_htfsCache) return _htfsCache;
-  // TODO: 15056760 endpoint 정정
-  _htfsCache = fetchAll<GenericProduct>('HtfsInfoService01', 'getHtfsInfoList01', {}, 300);
+  _htfsCache = fetchAll<GenericProduct>('HtfsInfoService03', 'getHtfsList01', {}, 300);
   return _htfsCache;
 }
 
+// 한약(생약) (15076330) — 정정 완료, 다른 base 도메인 (1471057)
 let _herbalCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllHerbalMedicines(): Promise<GenericProduct[]> {
   if (_herbalCache) return _herbalCache;
-  // TODO: 15076330 endpoint 정정
-  _herbalCache = fetchAll<GenericProduct>('HrbalMdcnInfoService01', 'getHrbalMdcnInfoList01', {}, 100);
+  _herbalCache = fetchAll<GenericProduct>(
+    'HerbMdntfService', 'getMdntf', {}, 100,
+    'https://apis.data.go.kr/1471057'
+  );
   return _herbalCache;
 }
 
-let _recallCache: Promise<GenericProduct[]> | null = null;
+// 의약품 회수·판매중지 (15059114) — 정정 완료
+let _drugRecallCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllDrugRecalls(): Promise<GenericProduct[]> {
+  if (_drugRecallCache) return _drugRecallCache;
+  _drugRecallCache = fetchAll<GenericProduct>(
+    'MdcinRtrvlSleStpgeInfoService04', 'getMdcinRtrvlSleStpgelList03', {}, 50
+  );
+  return _drugRecallCache;
+}
+
+// 식품 회수 (15074318) — 사용자 신청 결과 대기, TODO
+let _foodRecallCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllRecalls(): Promise<GenericProduct[]> {
-  if (_recallCache) return _recallCache;
-  // TODO: 15074318 endpoint 정정
-  _recallCache = fetchAll<GenericProduct>('FoodRecallInfoService01', 'getFoodRecallInfoList01', {}, 100);
-  return _recallCache;
+  if (_foodRecallCache) return _foodRecallCache;
+  _foodRecallCache = fetchAll<GenericProduct>(
+    'FoodRecallInfoService01', 'getFoodRecallInfoList01', {}, 100
+  );
+  return _foodRecallCache;
+}
+
+// 식품영양성분DB (15127578) — 정정 완료. endpoint 명 추정 (참고문서 xlsx 확인 후 정정 필요)
+let _foodNutritionCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllFoodNutrition(): Promise<GenericProduct[]> {
+  if (_foodNutritionCache) return _foodNutritionCache;
+  _foodNutritionCache = fetchAll<GenericProduct>(
+    'FoodNtrCpntDbInfo02', 'getFoodNtrCpntDbInq02', {}, 200
+  );
+  return _foodNutritionCache;
 }
 
 export function prefetchAll(): Promise<PrefetchCache> {

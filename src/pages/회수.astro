@@ -3,9 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
-import { fetchAllRecalls } from '../lib/mfds';
+import { fetchAllRecalls, fetchAllDrugRecalls } from '../lib/mfds';
 
-const items = await fetchAllRecalls().catch(() => []);
+const [foodRecalls, drugRecalls] = await Promise.all([
+  fetchAllRecalls().catch(() => []),
+  fetchAllDrugRecalls().catch(() => []),
+]);
+const items = [...drugRecalls, ...foodRecalls];
 ---
 <Layout
   title="회수·판매중지 정보"
