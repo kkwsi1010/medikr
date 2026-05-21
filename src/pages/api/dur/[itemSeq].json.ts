@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
-import { getDurTaboos, prefetchAll } from '../../../lib/mfds';
+import { getDurTaboos } from '../../../lib/mfds';
 
-export async function getStaticPaths() {
-  const { drugs } = await prefetchAll();
-  return drugs.map((d) => ({ params: { itemSeq: d.itemSeq } }));
-}
+// SSR endpoint — 매 요청 식약처 API 호출 + 24h 캐시
+// (prerender 안 함: 5만 약 × 3초 = 빌드 timeout)
+export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
   const taboos = await getDurTaboos(params.itemSeq!).catch(() => []);
@@ -20,7 +19,7 @@ export const GET: APIRoute = async ({ params }) => {
     {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
       },
     }
   );

@@ -1,18 +1,18 @@
 import type { APIRoute } from 'astro';
-import { prefetchAll } from '../../../lib/mfds';
+import { getEasyDrug, getPillIdent, getDrugPermit } from '../../../lib/mfds';
 
-export async function getStaticPaths() {
-  const { drugs } = await prefetchAll();
-  return drugs.map((d) => ({ params: { itemSeq: d.itemSeq } }));
-}
+// SSR endpoint — 매 요청 식약처 API 호출 + 24h 캐시
+// (prerender 안 함: 5만 약 prerender 시 빌드 timeout)
+export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
-  const { drugMap, pillMap, permitMap } = await prefetchAll();
   const seq = params.itemSeq!;
-  const d = drugMap.get(seq);
+  const [d, p, pm] = await Promise.all([
+    getEasyDrug(seq),
+    getPillIdent(seq),
+    getDrugPermit(seq),
+  ]);
   if (!d) return new Response('{}', { status: 404 });
-  const p = pillMap.get(seq);
-  const pm = permitMap.get(seq);
   const payload = {
     s: d.itemSeq,
     n: d.itemName,
@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ params }) => {
   return new Response(JSON.stringify(payload), {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'public, max-age=86400, s-maxage=86400',
     },
   });
 };
