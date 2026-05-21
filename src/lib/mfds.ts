@@ -1,8 +1,11 @@
-// 환경 dual 지원: Astro/Vite (import.meta.env) + Node tsx (process.env)
-const KEY: string | undefined =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.MFDS_API_KEY) ||
-  (typeof process !== 'undefined' && process.env?.MFDS_API_KEY) ||
-  undefined;
+// 환경 dual 지원: Vite (빌드 시 inline) + Node tsx (process.env)
+// import.meta.env.MFDS_API_KEY — Vite/Astro 가 정적 분석 → 빌드 시 실제 값 치환
+// Cloudflare Workers SSR runtime 에서는 inline 된 값 사용
+// @ts-ignore - import.meta.env typing
+const VITE_KEY: string | undefined = import.meta.env?.MFDS_API_KEY;
+const NODE_KEY: string | undefined =
+  typeof process !== 'undefined' ? process.env?.MFDS_API_KEY : undefined;
+const KEY: string | undefined = VITE_KEY || NODE_KEY;
 const BASE = 'https://apis.data.go.kr/1471000';
 const HAS_KEY = Boolean(KEY);
 
