@@ -114,7 +114,7 @@ const withImageCount = items.filter((i) => i.image).length;
             ? '<img src="' + d.image + '" alt="' + d.n + '" loading="lazy" />'
             : '<div class="no-img">이미지 없음</div>';
           const sub = [d.shape, d.color1, d.print].filter(Boolean).join(' · ');
-          return '<a href="/약/' + d.s + '" class="pill-card">'
+          return '<a href="/drug/' + d.s + '" class="pill-card">'
             + '<div class="pill-img-wrap">' + img + '</div>'
             + '<div class="pill-name">' + d.n + '</div>'
             + (sub ? '<div class="pill-sub">' + sub + '</div>' : '')

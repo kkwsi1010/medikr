@@ -67,7 +67,7 @@ const sampleEntp = Array.from(new Set(drugs.map((d) => d.entpName).filter(Boolea
   <ul class="drug-list">
     {drugs.map((d) => (
       <li>
-        <a href={`/약/${d.itemSeq}`}>{d.itemName}</a>
+        <a href={`/drug/${d.itemSeq}`}>{d.itemName}</a>
         {d.entpName && <span class="entp"> — {d.entpName}</span>}
       </li>
     ))}

@@ -82,7 +82,7 @@ const all: SearchItem[] = drugs.map((d) => ({
         }
         const slice = filtered.slice(0, visible);
         ul.innerHTML = slice.map(function(d) {
-          return '<li><a href="/약/' + d.itemSeq + '">' + d.itemName + '</a>'
+          return '<li><a href="/drug/' + d.itemSeq + '">' + d.itemName + '</a>'
             + '<span class="entp"> — ' + d.entpName + '</span>'
             + (d.ingredient ? '<div class="ing">성분: ' + d.ingredient + '</div>' : '')
             + '</li>';

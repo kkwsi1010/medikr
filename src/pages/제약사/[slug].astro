@@ -29,7 +29,7 @@ const { entp, drugs } = Astro.props;
   <AdSlot slot="5678901234" format="auto" />
   <ul class="drug-list">
     {drugs.map((d) => (
-      <li><a href={`/약/${d.itemSeq}`}>{d.itemName}</a></li>
+      <li><a href={`/drug/${d.itemSeq}`}>{d.itemName}</a></li>
     ))}
   </ul>
 </Layout>

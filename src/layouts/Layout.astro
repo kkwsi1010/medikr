@@ -364,7 +364,7 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
             .filter(d => d.n.toLowerCase().includes(term))
             .slice(0, 8);
           if (matches.length === 0) { sug.hidden = true; return; }
-          sug.innerHTML = matches.map(d => '<li><a href="/약/' + d.s + '">' + d.n + '<span>' + d.e + '</span></a></li>').join('');
+          sug.innerHTML = matches.map(d => '<li><a href="/drug/' + d.s + '">' + d.n + '<span>' + d.e + '</span></a></li>').join('');
           sug.hidden = false;
         }
         q.addEventListener('focus', loadIndex);

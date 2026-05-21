@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
         const seq = e[0], info = e[1];
         const date = info.added ? new Date(info.added).toLocaleDateString('ko-KR') : '';
         return '<div class="fav-card">'
-          + '<a href="/약/' + seq + '">' + info.name + '</a>'
+          + '<a href="/drug/' + seq + '">' + info.name + '</a>'
           + '<span class="fav-meta">추가: ' + date + '</span>'
           + '<button class="fav-remove" data-seq="' + seq + '" aria-label="제거">×</button>'
           + '</div>';

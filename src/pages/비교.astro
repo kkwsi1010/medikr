@@ -97,8 +97,8 @@ const idx = drugs.map((d) => ({ s: d.itemSeq, n: d.itemName, e: d.entpName }));
           '<h3>비교 결과</h3>'
           + '<table class="cmp-table">'
           + '<thead><tr><th></th>'
-          + '<th><a href="/약/' + a.s + '">' + a.n + '</a><div class="sub">' + a.e + '</div>' + img(a.image, a.n) + '</th>'
-          + '<th><a href="/약/' + b.s + '">' + b.n + '</a><div class="sub">' + b.e + '</div>' + img(b.image, b.n) + '</th>'
+          + '<th><a href="/drug/' + a.s + '">' + a.n + '</a><div class="sub">' + a.e + '</div>' + img(a.image, a.n) + '</th>'
+          + '<th><a href="/drug/' + b.s + '">' + b.n + '</a><div class="sub">' + b.e + '</div>' + img(b.image, b.n) + '</th>'
           + '</tr></thead><tbody>'
           + row('효능·효과', a.efcy, b.efcy)
           + row('사용법', a.use, b.use)

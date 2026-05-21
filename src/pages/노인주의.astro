@@ -51,7 +51,7 @@ const rows: Row[] = entries.map((e) => ({
         const slice = filtered.slice(0, visible);
         if (slice.length === 0) { list.innerHTML = '<li class="empty">검색 결과 없음</li>'; return; }
         list.innerHTML = slice.map(function(r) {
-          return '<li><a href="/약/' + r.seq + '"><strong>' + r.name + '</strong></a>'
+          return '<li><a href="/drug/' + r.seq + '"><strong>' + r.name + '</strong></a>'
             + (r.entp ? '<span class="entp"> ' + r.entp + '</span>' : '')
             + (r.ingredient ? '<div class="ing">성분: ' + r.ingredient + '</div>' : '')
             + (r.reason ? '<div class="reason">' + r.reason + '</div>' : '') + '</li>';

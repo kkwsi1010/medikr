@@ -161,7 +161,7 @@ const totalIngredients = new Set(
       <ul class="drug-grid">
         {recent.map((d) => (
           <li>
-            <a href={`/약/${d.itemSeq}`} class="drug-card">
+            <a href={`/drug/${d.itemSeq}`} class="drug-card">
               {d._date && <span class="drug-relative">{relativeDate(d._date)}</span>}
               <span class="drug-name">{d.itemName}</span>
               <span class="drug-meta">

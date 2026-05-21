@@ -82,7 +82,7 @@ const popular = [
           const tagsHtml = m.sources.map(function(s) {
             return '<span class="src src-' + s + '">' + s + '</span>';
           }).join('');
-          return '<li><a href="/약/' + m.d.s + '">' + m.d.n + '</a>'
+          return '<li><a href="/drug/' + m.d.s + '">' + m.d.n + '</a>'
             + '<span class="se-entp">' + m.d.e + '</span>'
             + '<div class="se-tags">' + tagsHtml + '</div></li>';
         }).join('');
