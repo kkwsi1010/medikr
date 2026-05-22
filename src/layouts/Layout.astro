@@ -132,7 +132,7 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
       padding: 14px 20px;
     }
     .site-header-inner {
-      max-width: 1120px; margin: 0 auto;
+      max-width: 880px; margin: 0 auto;
       display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
     }
     .site-logo {
@@ -376,12 +376,22 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
     <p>출처: 식품의약품안전처 공공데이터 (e약은요·DUR·낱알식별·허가정보)</p>
     <p>본 사이트는 정보 제공 목적이며, 복용 전 반드시 의사·약사와 상의하십시오.</p>
     <p class="footer-links">
+      <a href="/api/">API</a>·
+      <a href="/contact">문의하기</a>·
       <a href="/about">운영자</a>·
       <a href="/privacy">개인정보처리방침</a>·
       <a href="/terms">이용약관</a>·
       <a href="/rss.xml">RSS</a>
     </p>
-    <p style="margin-top:12px;color:var(--text-light)">© 2026 medikr.kr</p>
+    {(() => {
+      const start = new Date('2026-05-19');
+      const days = Math.floor((Date.now() - start.getTime()) / 86_400_000);
+      return (
+        <p style="margin-top:12px;color:var(--text-light)">
+          Since 2026-05-19 · 운영 {days}일째 · © 2026 medikr.kr
+        </p>
+      );
+    })()}
   </footer>
 </body>
 </html>

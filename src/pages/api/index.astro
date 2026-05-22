@@ -154,7 +154,7 @@ for d in r.json()['results']:
     <table class="compare">
       <thead><tr><th>항목</th><th>식약처 직접</th><th>medikr API</th></tr></thead>
       <tbody>
-        <tr><td>인증키 발급</td><td>data.go.kr 가입 + 신청 + 1~3일 대기</td><td>불필요</td></tr>
+        <tr><td>인증키 발급</td><td>data.go.kr 가입 + 신청</td><td>불필요</td></tr>
         <tr><td>Rate limit</td><td>일 1,000 (무료)</td><td>Cloudflare edge cache 로 사실상 무제한</td></tr>
         <tr><td>응답 schema</td><td>API 마다 camelCase / SNAKE_CASE 혼재</td><td>통일된 camelCase</td></tr>
         <tr><td>여러 API join</td><td>본인이 직접 (e약은요 + 낱알 + 허가)</td><td>1번 호출로 통합 응답</td></tr>

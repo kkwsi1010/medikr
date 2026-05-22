@@ -1,0 +1,93 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Web3Forms 무료 form-to-email (https://web3forms.com)
+// 사용자가 web3forms.com 가서 kkwsi1010@gmail.com 입력 후 발급 받은 access key 를 여기 박음
+const WEB3FORMS_KEY = import.meta.env.PUBLIC_WEB3FORMS_KEY ?? 'YOUR_WEB3FORMS_ACCESS_KEY';
+const TARGET_EMAIL = 'kkwsi1010@gmail.com';
+
+const SITE_START = new Date('2026-05-19');
+const today = new Date();
+const days = Math.floor((today.getTime() - SITE_START.getTime()) / 86_400_000);
+---
+<Layout title="문의하기" description="medikr API 문의 / 데이터 오류 신고 / 협업 제안">
+  <nav class="crumb"><a href="/">홈</a> <span>›</span> <span class="cur">문의하기</span></nav>
+
+  <h1>문의하기</h1>
+  <p class="lead">API 사용 문의 · 데이터 오류 신고 · 협업 제안 환영. 보통 1~2일 안 답변.</p>
+
+  <section class="contact-card">
+    <form action={`https://api.web3forms.com/submit`} method="POST" class="contact-form">
+      <input type="hidden" name="access_key" value={WEB3FORMS_KEY} />
+      <input type="hidden" name="subject" value="[medikr] 문의" />
+      <input type="hidden" name="from_name" value="medikr.kr 문의 form" />
+      <input type="checkbox" name="botcheck" style="display:none" />
+
+      <label>
+        <span>이름 *</span>
+        <input type="text" name="name" required autocomplete="name" placeholder="홍길동" />
+      </label>
+
+      <label>
+        <span>회신 받을 이메일 *</span>
+        <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
+      </label>
+
+      <label>
+        <span>문의 분류</span>
+        <select name="category">
+          <option value="API 사용">API 사용 문의</option>
+          <option value="데이터 오류">데이터 오류 신고</option>
+          <option value="협업">협업 제안</option>
+          <option value="기타">기타</option>
+        </select>
+      </label>
+
+      <label>
+        <span>내용 *</span>
+        <textarea name="message" required rows="6" placeholder="자세히 적어주시면 빠르게 답변드릴 수 있어요."></textarea>
+      </label>
+
+      <button type="submit">문의 전송</button>
+    </form>
+
+    <div class="contact-meta">
+      <p>또는 직접 이메일: <a href={`mailto:${TARGET_EMAIL}`}><strong>{TARGET_EMAIL}</strong></a></p>
+      <p style="color:var(--text-muted);font-size:13px">
+        medikr 서비스 시작 <strong>{SITE_START.toLocaleDateString('ko-KR')}</strong> · 운영 <strong>{days}</strong>일째
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  h1 { color: var(--navy-900); margin: 0 0 8px; font-family: var(--serif); font-size: 32px; }
+  .lead { color: var(--text-muted); margin-bottom: 24px; }
+  .contact-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px; box-shadow: var(--shadow-sm);
+  }
+  .contact-form { display: flex; flex-direction: column; gap: 14px; }
+  .contact-form label { display: flex; flex-direction: column; gap: 6px; }
+  .contact-form label span { font-size: 13px; font-weight: 600; color: var(--navy-900); }
+  .contact-form input[type="text"],
+  .contact-form input[type="email"],
+  .contact-form select,
+  .contact-form textarea {
+    padding: 11px 14px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: var(--sans);
+  }
+  .contact-form input:focus, .contact-form select:focus, .contact-form textarea:focus {
+    outline: none; border-color: var(--navy-900);
+  }
+  .contact-form button {
+    margin-top: 6px; padding: 13px 24px; background: var(--navy-900); color: #fff;
+    border: 0; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 15px;
+  }
+  .contact-form button:hover { background: var(--accent); }
+  .contact-meta { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .contact-meta a { color: var(--navy-900); }
+</style>
