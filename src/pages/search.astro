@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { prefetchAll } from '../lib/mfds';
+import drugNamesRaw from '../data/drug-names.json';
 
 type SearchItem = { itemSeq: string; itemName: string; entpName: string; ingredient?: string };
 
@@ -12,13 +13,15 @@ const all: SearchItem[] = drugs.map((d) => ({
   entpName: d.entpName,
   ingredient: permitMap.get(d.itemSeq)?.ITEM_INGR_NAME,
 }));
+// 전체 5만 약 카운트 (build-index 색인)
+const totalDrugs = Object.keys(drugNamesRaw as Record<string, string>).length;
 ---
-<Layout title="의약품 검색" description={`${all.length.toLocaleString()}개 의약품 이름·업체·성분으로 빠른 검색`}>
+<Layout title="의약품 검색" description={`${totalDrugs.toLocaleString()}개 의약품 이름·업체·성분으로 빠른 검색`}>
   <nav class="crumb" aria-label="breadcrumb">
     <a href="/">홈</a> <span>›</span><span class="cur">검색</span>
   </nav>
   <h2>의약품 검색</h2>
-  <p class="cnt">총 <strong>{all.length.toLocaleString()}</strong>개 의약품. 이름·업체·성분으로 검색합니다.</p>
+  <p class="cnt">총 <strong>{totalDrugs.toLocaleString()}</strong>개 의약품. 이름·업체·성분으로 검색합니다.</p>
   <div class="search-bar">
     <input type="search" id="q" placeholder="예: 타이레놀, 동화약품, 아세트아미노펜" autocomplete="off" />
   </div>

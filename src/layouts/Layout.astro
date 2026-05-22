@@ -191,7 +191,8 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
       box-shadow: 0 0 0 3px rgba(15,23,42,0.08);
     }
     .header-search::before {
-      content: ''; position: absolute; left: 13px; top: 18px;
+      content: ''; position: absolute; left: 13px;
+      top: 50%; transform: translateY(-50%);
       width: 14px; height: 14px;
       background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
       pointer-events: none;

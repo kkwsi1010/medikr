@@ -11,8 +11,17 @@ import ingredientIdxRaw from '../data/ingredient-idx.json';
 const { drugs, permitMap, pillMap } = await prefetchAll();
 
 // 최근 허가 의약품 — 5만 약 전체 기준 색인 (build-index.ts 가 prebuild)
+// 허가 API 가 0건 응답 시 e약은요 (drugs) 의 itemSeq 로 fallback
 type RecentPermit = { seq: string; name: string; entp: string; date: string };
-const recent = (recentPermitsRaw as RecentPermit[]).slice(0, 12);
+let recent: RecentPermit[] = (recentPermitsRaw as RecentPermit[]).slice(0, 12);
+if (recent.length === 0) {
+  recent = drugs.slice(0, 12).map((d) => ({
+    seq: d.itemSeq,
+    name: d.itemName,
+    entp: d.entpName,
+    date: '',
+  }));
+}
 
 function fmtDate(d: string): string {
   if (!d || d.length !== 8) return '';
@@ -245,7 +254,7 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
 
   .drug-grid {
     list-style: none; padding: 0; margin: 0;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    display: grid; grid-template-columns: 1fr;
     gap: 8px;
   }
   .drug-card {
