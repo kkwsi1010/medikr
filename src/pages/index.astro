@@ -4,13 +4,13 @@ import AdSlot from '../components/AdSlot.astro';
 import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
 import { prefetchAll } from '../lib/mfds';
+import recentPermitsRaw from '../data/recent-permits.json';
 
 const { drugs, permitMap, pillMap } = await prefetchAll();
-const recent = [...drugs]
-  .map((d) => ({ d, date: permitMap.get(d.itemSeq)?.ITEM_PERMIT_DATE ?? '' }))
-  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-  .slice(0, 12)
-  .map((x) => ({ ...x.d, _date: x.date }));
+
+// 최근 허가 의약품 — 5만 약 전체 기준 색인 (build-index.ts 가 prebuild)
+type RecentPermit = { seq: string; name: string; entp: string; date: string };
+const recent = (recentPermitsRaw as RecentPermit[]).slice(0, 12);
 
 function fmtDate(d: string): string {
   if (!d || d.length !== 8) return '';
@@ -161,12 +161,12 @@ const totalIngredients = new Set(
       <ul class="drug-grid">
         {recent.map((d) => (
           <li>
-            <a href={`/drug/${d.itemSeq}`} class="drug-card">
-              {d._date && <span class="drug-relative">{relativeDate(d._date)}</span>}
-              <span class="drug-name">{d.itemName}</span>
+            <a href={`/drug/${d.seq}`} class="drug-card">
+              {d.date && <span class="drug-relative">{relativeDate(d.date)}</span>}
+              <span class="drug-name">{d.name}</span>
               <span class="drug-meta">
-                {d.entpName && <span class="drug-entp">{d.entpName}</span>}
-                {d._date && <span class="drug-date">{fmtDate(d._date)} 허가</span>}
+                {d.entp && <span class="drug-entp">{d.entp}</span>}
+                {d.date && <span class="drug-date">{fmtDate(d.date)} 허가</span>}
               </span>
             </a>
           </li>

@@ -62,6 +62,23 @@ const sortedByDate = [...permits].sort((a, b) =>
 );
 for (const p of sortedByDate.slice(0, 2000)) popularSeq.push(p.ITEM_SEQ);
 
+// 최근 허가 약 (홈 페이지 "최근 허가 의약품" 섹션용)
+// e약은요 (drugs) 에 있는 itemSeq 만 포함 (페이지 SSR 가능한 약만)
+type RecentPermit = { seq: string; name: string; entp: string; date: string };
+const recentPermits: RecentPermit[] = [];
+for (const p of sortedByDate) {
+  if (recentPermits.length >= 100) break;
+  const name = drugNames[p.ITEM_SEQ];
+  if (!name) continue; // e약은요 에 없으면 skip
+  recentPermits.push({
+    seq: p.ITEM_SEQ,
+    name,
+    entp: p.ENTP_NAME ?? '',
+    date: p.ITEM_PERMIT_DATE ?? '',
+  });
+}
+fs.writeFileSync(path.join(OUT_DIR, 'recent-permits.json'), JSON.stringify(recentPermits));
+
 // 색인 저장
 fs.writeFileSync(path.join(OUT_DIR, 'drug-names.json'), JSON.stringify(drugNames));
 fs.writeFileSync(path.join(OUT_DIR, 'ingredient-idx.json'), JSON.stringify(ingredientIdx));
@@ -77,6 +94,7 @@ const sizes = {
   'entp-idx': fs.statSync(path.join(OUT_DIR, 'entp-idx.json')).size,
   'search-idx': fs.statSync(path.join(OUT_DIR, 'search-idx.json')).size,
   'popular-seq': fs.statSync(path.join(OUT_DIR, 'popular-seq.json')).size,
+  'recent-permits': fs.statSync(path.join(OUT_DIR, 'recent-permits.json')).size,
 };
 const totalKB = Object.values(sizes).reduce((a, b) => a + b, 0) / 1024;
 
