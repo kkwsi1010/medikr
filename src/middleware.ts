@@ -16,14 +16,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
     !path.match(/^\/(favicon|manifest|robots|ads|sitemap)/);
 
   if (db && isPageView) {
-    // KST 오늘 날짜 (UTC+9)
+    // KST 오늘 (UTC+9)
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const date = kstNow.toISOString().slice(0, 10);
-    // UPSERT — 같은 날짜 row 면 count +1
+    const visitDate = kstNow.toISOString().slice(0, 10);   // 'YYYY-MM-DD'
+    const ts = kstNow.toISOString().slice(0, 19).replace('T', ' '); // 'YYYY-MM-DD HH:MI:SS'
+    // UPSERT — 같은 날짜 row 면 visit_cnt +1 + moddate 갱신
     db.prepare(
-      'INSERT INTO visits (date, count) VALUES (?, 1) ON CONFLICT(date) DO UPDATE SET count = count + 1'
+      `INSERT INTO tb_visit_stat (visit_date, visit_cnt, indate, inuser, moddate, moduser, delcheck)
+       VALUES (?, 1, ?, 'system', ?, 'system', 'N')
+       ON CONFLICT(visit_date) DO UPDATE SET
+         visit_cnt = visit_cnt + 1,
+         moddate = excluded.moddate`
     )
-      .bind(date)
+      .bind(visitDate, ts, ts)
       .run()
       .catch(() => {}); // 실패해도 페이지 응답 계속
   }

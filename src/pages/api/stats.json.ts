@@ -18,12 +18,12 @@ export const GET: APIRoute = async ({ locals }) => {
 
   try {
     const [todayRow, totalRow] = await Promise.all([
-      db.prepare('SELECT count FROM visits WHERE date = ?').bind(today).first(),
-      db.prepare('SELECT SUM(count) as total FROM visits').first(),
+      db.prepare('SELECT visit_cnt FROM tb_visit_stat WHERE visit_date = ?').bind(today).first(),
+      db.prepare("SELECT SUM(visit_cnt) as total FROM tb_visit_stat WHERE delcheck='N'").first(),
     ]);
     return jsonResponse(
       {
-        today: Number((todayRow as any)?.count ?? 0),
+        today: Number((todayRow as any)?.visit_cnt ?? 0),
         total: Number((totalRow as any)?.total ?? 0),
         date: today,
       },
