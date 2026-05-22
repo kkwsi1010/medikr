@@ -32,6 +32,8 @@ jobs:
           PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
           PUBLIC_GOOGLE_VERIFY: ${{ vars.PUBLIC_GOOGLE_VERIFY }}
           PUBLIC_NAVER_VERIFY: ${{ vars.PUBLIC_NAVER_VERIFY }}
+          PUBLIC_WEB3FORMS_KEY: ${{ vars.PUBLIC_WEB3FORMS_KEY }}
+          PUBLIC_CF_ANALYTICS_TOKEN: ${{ vars.PUBLIC_CF_ANALYTICS_TOKEN }}
         run: npm run build
 
       - name: Upload build artifact (backup, optional)
