@@ -11,7 +11,7 @@ const CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
 {CLIENT && slot && (
   <ins
     class="adsbygoogle"
-    style="display:block;margin:16px 0"
+    style="display:block"
     data-ad-client={CLIENT}
     data-ad-slot={slot}
     data-ad-format={format}
@@ -19,3 +19,10 @@ const CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
   ></ins>
   <script set:html={`(adsbygoogle = window.adsbygoogle || []).push({});`}></script>
 )}
+
+<style is:global>
+  /* AdSense 가 unfilled (광고 없음 / 미승인) 응답 시 슬롯 제거 — 빈 공간 방지 */
+  ins.adsbygoogle[data-ad-status="unfilled"] { display: none !important; }
+  /* 광고 채워진 슬롯만 위/아래 spacing */
+  ins.adsbygoogle[data-ad-status="filled"] { margin: 16px 0; }
+</style>
