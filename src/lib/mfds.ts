@@ -334,12 +334,14 @@ export function fetchAllHerbalMedicines(): Promise<GenericProduct[]> {
   return _herbalCache;
 }
 
-// 의약품 회수·판매중지 (15059114) — 정정 완료
+// 의약품 회수·판매중지 (15059114) — 응답 wrapping {item: {...}} unwrap
 let _drugRecallCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllDrugRecalls(): Promise<GenericProduct[]> {
   if (_drugRecallCache) return _drugRecallCache;
-  _drugRecallCache = fetchAll<GenericProduct>(
+  _drugRecallCache = fetchAll<{ item: GenericProduct } | GenericProduct>(
     'MdcinRtrvlSleStpgeInfoService04', 'getMdcinRtrvlSleStpgelList03', {}, 30
+  ).then((items) =>
+    items.map((i) => ('item' in i && i.item ? i.item : (i as GenericProduct)))
   );
   return _drugRecallCache;
 }
