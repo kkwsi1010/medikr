@@ -92,8 +92,12 @@ const endpoints = [
       <li>CORS <strong>전체 허용</strong> (모든 도메인)</li>
       <li>Cloudflare edge cache <strong>24h</strong></li>
       <li>무료 / 무제한 (Fair use)</li>
-      <li>응답 schema 통일 / camelCase</li>
+      <li>OpenAPI 3.1 spec + Swagger UI</li>
     </ul>
+    <div class="api-cta">
+      <a href="/api/swagger" class="cta-primary">Swagger UI 열기</a>
+      <a href="/api/openapi.json" class="cta-secondary">openapi.json 다운로드</a>
+    </div>
   </header>
 
   <AdSlot slot="9000000010" format="auto" />
@@ -170,6 +174,17 @@ for d in r.json()['results']:
   .api-features { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 16px; margin: 0; }
   .api-features li { background: rgba(255,255,255,0.12); padding: 8px 14px; border-radius: 6px; font-size: 14px; }
   .api-features strong { color: #fbbf24; font-weight: 700; }
+  .api-cta { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .cta-primary {
+    padding: 12px 24px; background: #fbbf24; color: #0f172a;
+    border-radius: 6px; font-weight: 700; text-decoration: none;
+  }
+  .cta-primary:hover { background: #fcd34d; }
+  .cta-secondary {
+    padding: 12px 24px; background: rgba(255,255,255,0.15); color: #fff;
+    border-radius: 6px; font-weight: 600; text-decoration: none;
+  }
+  .cta-secondary:hover { background: rgba(255,255,255,0.25); }
 
   section { margin-top: 32px; }
   section h2 { color: var(--navy-900); border-bottom: 2px solid var(--navy-900); padding-bottom: 6px; margin-bottom: 16px; }
