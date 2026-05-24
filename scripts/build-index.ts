@@ -21,6 +21,16 @@ const [drugs, pills, permits] = await Promise.all([
 
 console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length}`);
 
+// 진단: 받은 permits 의 ITEM_PERMIT_DATE 분포 (최근 누락 여부 확인)
+{
+  const dates = permits.map((p) => p.ITEM_PERMIT_DATE ?? '').filter(Boolean).sort();
+  const max = dates[dates.length - 1];
+  const min = dates[0];
+  const after2026 = dates.filter((d) => d >= '20260101').length;
+  const after2025h2 = dates.filter((d) => d >= '20250701').length;
+  console.log(`  [permits diag] date ${min}~${max} / 2025-07+:${after2025h2} / 2026+:${after2026}`);
+}
+
 const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
 const permitMap = new Map(permits.map((p) => [p.ITEM_SEQ, p]));
 
