@@ -17,17 +17,32 @@ import entpIdx from '../../data/entp-idx.json';
 const { itemSeq } = Astro.params;
 if (!itemSeq) return Astro.redirect('/search', 302);
 
-// 식약처 API 3건 병렬 fetch — drug 가 null 이면 404
-const [drug, pill, permit, taboos] = await Promise.all([
+// 식약처 API 3건 병렬 fetch — drug (e약은요) 가 null 이어도 permit 또는 pill 있으면 표시
+const [drugRaw, pill, permit, taboos] = await Promise.all([
   getEasyDrug(itemSeq),
   getPillIdent(itemSeq),
   getDrugPermit(itemSeq),
   getDurTaboos(itemSeq).catch(() => []),
 ]);
 
-if (!drug) {
+if (!drugRaw && !permit && !pill) {
   return new Response('Drug not found', { status: 404 });
 }
+
+// e약은요 없으면 permit/pill 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
+const drug = drugRaw ?? {
+  itemSeq,
+  itemName: permit?.ITEM_NAME ?? pill?.ITEM_NAME ?? '의약품',
+  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? '',
+  efcyQesitm: undefined,
+  useMethodQesitm: undefined,
+  atpnQesitm: undefined,
+  atpnWarnQesitm: undefined,
+  intrcQesitm: undefined,
+  seQesitm: undefined,
+  depositMethodQesitm: undefined,
+  itemImage: undefined,
+} as any;
 
 // 같은 성분/분류/제약사 약 5개씩 (색인 lookup — 실패해도 graceful)
 const _drugNames = (drugNames ?? {}) as Record<string, string>;

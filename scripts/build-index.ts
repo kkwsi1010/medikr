@@ -73,13 +73,13 @@ const sortedByDate = [...permits].sort((a, b) =>
 for (const p of sortedByDate.slice(0, 2000)) popularSeq.push(p.ITEM_SEQ);
 
 // 최근 허가 약 (홈 페이지 "최근 허가 의약품" 섹션용)
-// e약은요 (drugs) 에 있는 itemSeq 만 포함 (페이지 SSR 가능한 약만)
+// e약은요 없는 약도 포함 (drug page 가 permit fallback 으로 표시)
 type RecentPermit = { seq: string; name: string; entp: string; date: string };
 const recentPermits: RecentPermit[] = [];
 for (const p of sortedByDate) {
   if (recentPermits.length >= 100) break;
-  const name = drugNames[p.ITEM_SEQ];
-  if (!name) continue; // e약은요 에 없으면 skip
+  const name = drugNames[p.ITEM_SEQ] ?? p.ITEM_NAME;
+  if (!name) continue; // permit 자체에 이름이 없으면 skip
   recentPermits.push({
     seq: p.ITEM_SEQ,
     name,
