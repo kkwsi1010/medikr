@@ -34,6 +34,8 @@ jobs:
           PUBLIC_NAVER_VERIFY: ${{ vars.PUBLIC_NAVER_VERIFY }}
           PUBLIC_WEB3FORMS_KEY: ${{ vars.PUBLIC_WEB3FORMS_KEY }}
           PUBLIC_CF_ANALYTICS_TOKEN: ${{ vars.PUBLIC_CF_ANALYTICS_TOKEN }}
+          # 빌드 SHA → drug 페이지 캐시 네임스페이스. 빌드마다 새 키로 옛 캐시 응답 격리.
+          PUBLIC_CACHE_VERSION: ${{ github.sha }}
         run: npm run build
 
       - name: Upload build artifact (backup, optional)
