@@ -72,3 +72,21 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # 한글 commit message → CF API Invalid UTF-8 회피: SHA + dirty 만 전달
           command: pages deploy dist --project-name=medikr --branch=main --commit-message="${{ github.sha }}"
+
+      - name: Cloudflare Cache Rule — /drug/* edge 캐시 (idempotent)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          # drug 페이지는 매 요청 식약처 API 4개 호출(~3-7s) → edge 캐시로 첫 요청만 느리게.
+          # Pages Functions(SSR) 응답은 기본 DYNAMIC(캐시 X) → Cache Rule 로 강제 캐시.
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=medikr.kr" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          echo "zone_id=$ZONE_ID"
+          if [ -n "$ZONE_ID" ]; then
+            curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/rulesets/phases/http_request_cache_settings/entrypoint" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{"rules":[{"expression":"(starts_with(http.request.uri.path, \"/drug/\")) or (starts_with(http.request.uri.path, \"/api/sitemap\"))","action":"set_cache_settings","action_parameters":{"cache":true,"edge_ttl":{"mode":"override_origin","default":86400},"browser_ttl":{"mode":"override_origin","default":300}}}]}' \
+              | python3 -c "import json,sys; d=json.load(sys.stdin); print('cache rule:', 'OK' if d.get('success') else d.get('errors'))"
+          fi
