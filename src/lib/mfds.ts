@@ -116,9 +116,13 @@ export async function listEasyDrugs(pageNo = 1, numOfRows = 100) {
   });
 }
 
+// 식약처 API 는 매칭 안 되는 itemSeq 에 대해 빈 결과가 아니라 첫 항목을 반환하는 경우가 있어
+// (존재하지 않는 약이 엉뚱한 약으로 200 응답 → soft-404/중복 양산),
+// 반환된 약의 itemSeq 가 요청과 일치할 때만 인정한다.
 export async function getEasyDrug(itemSeq: string): Promise<EasyDrug | null> {
   const { items } = await fetchApi<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', { itemSeq });
-  return items[0] ?? null;
+  const found = items.find((d) => String(d.itemSeq) === String(itemSeq));
+  return found ?? null;
 }
 
 export async function getPillIdent(itemSeq: string): Promise<PillIdent | null> {
@@ -127,7 +131,8 @@ export async function getPillIdent(itemSeq: string): Promise<PillIdent | null> {
     'getMdcinGrnIdntfcInfoList03',
     { item_seq: itemSeq }
   );
-  return items[0] ?? null;
+  const found = items.find((p) => String(p.ITEM_SEQ) === String(itemSeq));
+  return found ?? null;
 }
 
 export async function getDrugPermit(itemSeq: string): Promise<DrugPermit | null> {
@@ -136,7 +141,8 @@ export async function getDrugPermit(itemSeq: string): Promise<DrugPermit | null>
     'getDrugPrdtPrmsnInq07',
     { item_seq: itemSeq }
   );
-  return items[0] ?? null;
+  const found = items.find((p) => String(p.ITEM_SEQ) === String(itemSeq));
+  return found ?? null;
 }
 
 const _durCache = new Map<string, Promise<DurTaboo[]>>();

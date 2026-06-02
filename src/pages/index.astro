@@ -53,7 +53,7 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
       <h1>의약품 검색 +<br />무료 API</h1>
       <p class="lead">식약처 공식 데이터 {totalDrugs.toLocaleString()}종 의약품. 검색하고 사용하세요. 개발자는 <a href="/api/" style="color:var(--accent-light);text-decoration:underline">무료 API</a> 로.</p>
 
-      <form action="/search" method="get" class="hero-search">
+      <form action="/search/" method="get" class="hero-search">
         <input type="search" name="q" placeholder="약 이름·제약사 검색" autocomplete="off" />
         <button type="submit" aria-label="검색">검색</button>
       </form>
@@ -73,7 +73,7 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
   <section class="content-section">
     <div class="section-head">
       <h2>최근 허가 의약품</h2>
-      <a href="/search" class="see-more">전체 검색 →</a>
+      <a href="/search/" class="see-more">전체 검색 →</a>
     </div>
     {recent.length > 0 ? (
       <ul class="drug-grid">

@@ -15,7 +15,7 @@ import classIdx from '../../data/class-idx.json';
 import entpIdx from '../../data/entp-idx.json';
 
 const { itemSeq } = Astro.params;
-if (!itemSeq) return Astro.redirect('/search', 302);
+if (!itemSeq) return Astro.redirect('/search/', 302);
 
 // 식약처 API 3건 병렬 fetch — drug (e약은요) 가 null 이어도 permit 또는 pill 있으면 표시
 const [drugRaw, pill, permit, taboos] = await Promise.all([
@@ -107,13 +107,16 @@ function compact(text: string): string {
 }
 const metaDesc = (drug.efcyQesitm ?? `${drug.itemName} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 150);
 
+// canonical 정규화 — Layout 과 동일하게 trailing slash. sitemap(/drug/xxx/) 과 일치.
+const canonicalUrl = `https://medikr.kr/drug/${itemSeq}/`;
+
 const breadcrumbList = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: '홈', item: 'https://medikr.kr/' },
-    { '@type': 'ListItem', position: 2, name: '의약품', item: 'https://medikr.kr/search' },
-    { '@type': 'ListItem', position: 3, name: drug.itemName, item: new URL(Astro.url.pathname, Astro.site).href },
+    { '@type': 'ListItem', position: 2, name: '의약품', item: 'https://medikr.kr/search/' },
+    { '@type': 'ListItem', position: 3, name: drug.itemName, item: canonicalUrl },
   ],
 };
 // Article schema — 의약품 정보 페이지 (Drug schema 는 Google 이 Product snippet 처리
@@ -130,7 +133,7 @@ const articleJsonLd = {
     name: 'medikr',
     url: 'https://medikr.kr/',
   },
-  mainEntityOfPage: new URL(Astro.url.pathname, Astro.site).href,
+  mainEntityOfPage: canonicalUrl,
   about: {
     '@type': 'MedicalEntity',
     name: drug.itemName,
@@ -145,7 +148,7 @@ const articleJsonLd = {
   <nav class="crumb" aria-label="breadcrumb">
     <a href="/">홈</a>
     <span>›</span>
-    <a href="/search">의약품</a>
+    <a href="/search/">의약품</a>
     <span>›</span>
     <span class="cur">{drug.itemName}</span>
   </nav>

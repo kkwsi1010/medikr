@@ -6,7 +6,7 @@ import Layout from '../layouts/Layout.astro';
     <h1>페이지를 찾을 수 없습니다</h1>
     <p class="err-meta">요청하신 의약품 정보 페이지가 존재하지 않거나 이동되었을 수 있습니다.</p>
 
-    <form action="/search" method="get" class="err-search">
+    <form action="/search/" method="get" class="err-search">
       <input type="search" name="q" placeholder="찾고 싶은 약 이름으로 검색해보세요" autocomplete="off" autofocus />
       <button type="submit">검색</button>
     </form>
@@ -15,13 +15,13 @@ import Layout from '../layouts/Layout.astro';
       <a href="/" class="err-card">
         <strong>홈으로</strong><span>medikr 메인 화면</span>
       </a>
-      <a href="/search" class="err-card">
+      <a href="/search/" class="err-card">
         <strong>약 검색</strong><span>5만 의약품 검색</span>
       </a>
       <a href="/api/" class="err-card">
         <strong>무료 API</strong><span>식약처 통합 API</span>
       </a>
-      <a href="/about" class="err-card">
+      <a href="/about/" class="err-card">
         <strong>사이트 소개</strong><span>데이터 출처</span>
       </a>
     </div>

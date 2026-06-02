@@ -6,7 +6,16 @@ interface Props {
 }
 
 const { title, description = '식약처 공식 데이터 기반 의약품 정보 검색', ogImage } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site).href;
+// canonical trailing-slash 정규화 — sitemap 이 전부 slash 로 끝나므로 일치시킨다.
+// (정적 페이지는 이미 /about/ 형태, SSR drug 페이지는 /drug/xxx → /drug/xxx/ 로 보정)
+// 확장자 있는 경로(.xml 등)와 루트(/)는 그대로.
+const rawPath = Astro.url.pathname;
+const lastSeg = rawPath.split('/').pop() ?? '';
+const normalizedPath =
+  rawPath === '/' || rawPath.endsWith('/') || lastSeg.includes('.')
+    ? rawPath
+    : rawPath + '/';
+const canonical = new URL(normalizedPath, Astro.site).href;
 const path = Astro.url.pathname;
 function isActive(prefix: string): string {
   return path === prefix || path.startsWith(prefix + '/') ? ' active' : '';
@@ -82,7 +91,7 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
     inLanguage: 'ko-KR',
     potentialAction: {
       '@type': 'SearchAction',
-      target: { '@type': 'EntryPoint', urlTemplate: 'https://medikr.kr/search?q={q}' },
+      target: { '@type': 'EntryPoint', urlTemplate: 'https://medikr.kr/search/?q={q}' },
       'query-input': 'required name=q',
     },
     publisher: { '@type': 'Organization', name: 'medikr', url: 'https://medikr.kr/' },
@@ -328,13 +337,13 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
       <button class="nav-toggle" id="nav-toggle" aria-label="메뉴 열기" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
-      <form action="/search" method="get" class="header-search" role="search">
+      <form action="/search/" method="get" class="header-search" role="search">
         <input type="search" name="q" id="hdr-q" placeholder="약 이름 검색" autocomplete="off" />
         <ul id="hdr-sug" class="hdr-sug" hidden></ul>
       </form>
       <nav class="site-nav" id="site-nav" aria-label="주요 메뉴">
-        <a href="/search" class={isActive('/search').trim()}>약 검색</a>
-        <a href="/api" class={`nav-highlight${isActive('/api')}`}>API</a>
+        <a href="/search/" class={isActive('/search').trim()}>약 검색</a>
+        <a href="/api/" class={`nav-highlight${isActive('/api')}`}>API</a>
       </nav>
     </div>
   </header>
@@ -389,10 +398,10 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
     <p>본 사이트는 정보 제공 목적이며, 복용 전 반드시 의사·약사와 상의하십시오.</p>
     <p class="footer-links">
       <a href="/api/">API</a>·
-      <a href="/contact">문의하기</a>·
-      <a href="/about">운영자</a>·
-      <a href="/privacy">개인정보처리방침</a>·
-      <a href="/terms">이용약관</a>·
+      <a href="/contact/">문의하기</a>·
+      <a href="/about/">운영자</a>·
+      <a href="/privacy/">개인정보처리방침</a>·
+      <a href="/terms/">이용약관</a>·
       <a href="/rss.xml">RSS</a>
     </p>
     {(() => {
