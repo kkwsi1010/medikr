@@ -9,8 +9,9 @@ import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
 
 // 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 fallback
-// permit-meta(7.5MB)는 정적 import 하면 매 요청 파싱으로 4s+ 느려져서, permit-only 약일 때만 dynamic import
+// (색인 파싱은 빠름: search.json 의 3.7MB 색인도 0.6s. 느림의 원인은 식약처 API → middleware 캐시로 해결)
 import drugNames from '../../data/drug-names.json';
+import permitMetaIdx from '../../data/permit-meta.json';
 import ingredientIdx from '../../data/ingredient-idx.json';
 import classIdx from '../../data/class-idx.json';
 import entpIdx from '../../data/entp-idx.json';
@@ -36,13 +37,9 @@ const [drugRaw, pill, permit, taboos] = await Promise.all([
   getDurTaboos(itemSeq).catch(() => []),
 ]);
 
-// permit-meta(7.5MB)는 e약은요·permit 단건 둘 다 없는 permit-only 약일 때만 dynamic import
-// (e약은요 약은 이 거대 색인을 파싱하지 않아 응답 빠름)
-let meta: PermitMeta | undefined;
-if (!drugRaw && !permit) {
-  const mod = await import('../../data/permit-meta.json');
-  meta = (mod.default as Record<string, PermitMeta>)[itemSeq];
-}
+// permit-only 약(e약은요·permit 단건 둘 다 없음)은 색인 meta 로 상세 보강
+const meta: PermitMeta | undefined =
+  !drugRaw && !permit ? (permitMetaIdx as Record<string, PermitMeta>)[itemSeq] : undefined;
 
 // e약은요 없으면 permit/pill/색인 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
 const drug = drugRaw ?? {
