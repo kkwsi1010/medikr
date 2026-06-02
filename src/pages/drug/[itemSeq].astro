@@ -8,8 +8,9 @@ import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
 
-// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천
+// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 fallback
 import drugNames from '../../data/drug-names.json';
+import permitMetaIdx from '../../data/permit-meta.json';
 import ingredientIdx from '../../data/ingredient-idx.json';
 import classIdx from '../../data/class-idx.json';
 import entpIdx from '../../data/entp-idx.json';
@@ -17,7 +18,7 @@ import entpIdx from '../../data/entp-idx.json';
 const { itemSeq } = Astro.params;
 if (!itemSeq) return Astro.redirect('/search/', 302);
 
-// 식약처 API 3건 병렬 fetch — drug (e약은요) 가 null 이어도 permit 또는 pill 있으면 표시
+// 식약처 API 3건 병렬 fetch — drug (e약은요) 가 null 이어도 permit/pill/색인 있으면 표시
 const [drugRaw, pill, permit, taboos] = await Promise.all([
   getEasyDrug(itemSeq),
   getPillIdent(itemSeq),
@@ -25,15 +26,23 @@ const [drugRaw, pill, permit, taboos] = await Promise.all([
   getDurTaboos(itemSeq).catch(() => []),
 ]);
 
-if (!drugRaw && !permit && !pill) {
+// 색인 lookup — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 permit-only 약은 색인으로 보강
+type PermitMeta = { e: string; d: string; i: string; s: string; t: string; no: string };
+const _allNames = drugNames as Record<string, string>;
+const _permitMeta = permitMetaIdx as Record<string, PermitMeta>;
+const indexName = _allNames[itemSeq];
+const meta = _permitMeta[itemSeq];
+
+// 유효성: 단건 API 매칭 OR 색인에 존재. 둘 다 없으면 진짜 404 (잘못된 itemSeq).
+if (!drugRaw && !permit && !pill && !indexName && !meta) {
   return new Response('Drug not found', { status: 404 });
 }
 
-// e약은요 없으면 permit/pill 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
+// e약은요 없으면 permit/pill/색인 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
 const drug = drugRaw ?? {
   itemSeq,
-  itemName: permit?.ITEM_NAME ?? pill?.ITEM_NAME ?? '의약품',
-  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? '',
+  itemName: permit?.ITEM_NAME ?? pill?.ITEM_NAME ?? indexName ?? '의약품',
+  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? meta?.e ?? '',
   efcyQesitm: undefined,
   useMethodQesitm: undefined,
   atpnQesitm: undefined,
@@ -44,6 +53,18 @@ const drug = drugRaw ?? {
   itemImage: undefined,
 } as any;
 
+// 허가정보 — 단건 permit 우선, 없으면 색인 meta 로 보강 (permit-only 약도 성분/허가일/구분 표시)
+const permitInfo = permit ?? (meta ? {
+  ITEM_SEQ: itemSeq,
+  ITEM_NAME: indexName ?? drug.itemName,
+  ENTP_NAME: meta.e,
+  ITEM_PERMIT_DATE: meta.d,
+  SPCLTY_PBLC: meta.s,
+  PRDUCT_TYPE: meta.t,
+  PRDUCT_PRMISN_NO: meta.no,
+  ITEM_INGR_NAME: meta.i,
+} as typeof permit : null);
+
 // 같은 성분/분류/제약사 약 5개씩 (색인 lookup — 실패해도 graceful)
 const _drugNames = (drugNames ?? {}) as Record<string, string>;
 const _ingredientIdx = (ingredientIdx ?? {}) as Record<string, string[]>;
@@ -51,8 +72,8 @@ const _classIdx = (classIdx ?? {}) as Record<string, string[]>;
 const _entpIdx = (entpIdx ?? {}) as Record<string, string[]>;
 
 const sameIngredient: { seq: string; name: string }[] = [];
-if (permit?.ITEM_INGR_NAME) {
-  const ingredients = permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean);
+if (permitInfo?.ITEM_INGR_NAME) {
+  const ingredients = permitInfo.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean);
   const seen = new Set<string>();
   for (const ing of ingredients) {
     const list = _ingredientIdx[ing] ?? [];
@@ -137,7 +158,7 @@ const articleJsonLd = {
   about: {
     '@type': 'MedicalEntity',
     name: drug.itemName,
-    ...(permit?.ITEM_INGR_NAME && { code: { '@type': 'MedicalCode', code: permit.ITEM_INGR_NAME } }),
+    ...(permitInfo?.ITEM_INGR_NAME && { code: { '@type': 'MedicalCode', code: permitInfo.ITEM_INGR_NAME } }),
   },
 };
 ---
@@ -162,7 +183,7 @@ const articleJsonLd = {
     )}
     <p style="color:var(--text-muted);font-size:14px">
       {drug.entpName} · 품목코드 <code>{drug.itemSeq}</code>
-      {permit?.PRDUCT_PRMISN_NO && <> · 허가번호 <code>{permit.PRDUCT_PRMISN_NO}</code></>}
+      {permitInfo?.PRDUCT_PRMISN_NO && <> · 허가번호 <code>{permitInfo.PRDUCT_PRMISN_NO}</code></>}
     </p>
 
     <div class="action-row">
@@ -230,14 +251,14 @@ const articleJsonLd = {
       </section>
     )}
 
-    {permit && (
+    {permitInfo && (
       <section>
         <h3>허가 정보</h3>
         <dl>
-          {permit.ITEM_PERMIT_DATE && (<><dt>허가일자</dt><dd>{permit.ITEM_PERMIT_DATE}</dd></>)}
-          {permit.SPCLTY_PBLC && (<><dt>구분</dt><dd>{permit.SPCLTY_PBLC}</dd></>)}
-          {permit.PRDUCT_TYPE && (<><dt>제품 유형</dt><dd>{permit.PRDUCT_TYPE}</dd></>)}
-          {permit.ITEM_INGR_NAME && (<><dt>주성분</dt><dd>{permit.ITEM_INGR_NAME}</dd></>)}
+          {permitInfo.ITEM_PERMIT_DATE && (<><dt>허가일자</dt><dd>{permitInfo.ITEM_PERMIT_DATE}</dd></>)}
+          {permitInfo.SPCLTY_PBLC && (<><dt>구분</dt><dd>{permitInfo.SPCLTY_PBLC}</dd></>)}
+          {permitInfo.PRDUCT_TYPE && (<><dt>제품 유형</dt><dd>{permitInfo.PRDUCT_TYPE}</dd></>)}
+          {permitInfo.ITEM_INGR_NAME && (<><dt>주성분</dt><dd>{permitInfo.ITEM_INGR_NAME}</dd></>)}
         </dl>
       </section>
     )}
