@@ -3,8 +3,10 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  schedule:
+    # 매일 06:00 KST (21:00 UTC) — 식약처 데이터 갱신 + D1 seed 재적재 + 배포.
+    # (cron.yml 의 빈커밋은 GITHUB_TOKEN push 라 이 workflow 를 트리거 못 해서 직접 schedule)
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 jobs:
