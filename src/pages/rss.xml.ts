@@ -39,7 +39,7 @@ export async function GET(context: APIContext) {
   <channel>
     <title>medikr — 의약품 정보</title>
     <link>${site}</link>
-    <description>식약처 공식 데이터 기반 의약품 정보 검색. 최근 허가된 약 50종 + 처방분석·부작용검색 도구.</description>
+    <description>식약처 공식 데이터 기반 의약품 정보 검색. 5만+ 의약품 + 무료 통합 API.</description>
     <language>ko-KR</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${site}rss.xml" rel="self" type="application/rss+xml" />

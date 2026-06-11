@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { prefetchAll } from '../../lib/mfds';
 import { jsonResponse, corsHeaders } from '../../lib/api-cors';
 
-// 헤더 자동완성 / 처방분석 / 비교 페이지 — 가볍게 e약은요 4,757건만
+// 헤더 자동완성용 — 가볍게 e약은요 4,800여 건만
 // 외부 API 풀 검색은 /api/search?q=... 사용
 export const OPTIONS: APIRoute = () => new Response(null, { headers: corsHeaders });
 
