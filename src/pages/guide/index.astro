@@ -1,0 +1,45 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+// 복약 가이드 목록 — 식약처 덤프가 아닌, 직접 작성한 일반 복약 상식 글
+const articles = [
+  {
+    slug: 'medication-timing',
+    title: "약 먹는 시간, '식후 30분'은 무슨 뜻일까",
+    desc: '식전·식후·취침 전 복용의 이유와, 먹는 것을 깜빡했을 때의 대처를 정리했습니다.',
+    date: '2026-07-11',
+  },
+  {
+    slug: 'fever-pain-relievers',
+    title: '해열진통제 성분 구분 — 아세트아미노펜과 이부프로펜',
+    desc: '약국에서 가장 흔한 두 해열진통 성분의 차이와 복용 시 주의할 점.',
+    date: '2026-07-11',
+  },
+  {
+    slug: 'drug-storage',
+    title: '약 올바른 보관법 — 실온·냉장·차광과 유효기간',
+    desc: '가정에서 약을 안전하게 보관하는 법과, 개봉 후 사용기한을 확인하는 방법.',
+    date: '2026-07-11',
+  },
+];
+---
+<Layout
+  title="복약 가이드"
+  description="약 먹는 시간, 해열진통제 성분 차이, 약 보관법 등 일반인을 위한 복약 상식을 쉽게 정리했습니다. medikr 복약 가이드."
+>
+  <h1>복약 가이드</h1>
+
+  <section>
+    <p>처방받은 약을 안전하게 복용하는 데 도움이 되는 일반 상식을 정리한 코너입니다. 개별 의약품의 효능·용법은 <a href="/search/">약 검색</a>에서 식약처 공식 정보를 확인하실 수 있습니다.</p>
+    <p><strong>안내</strong> — 아래 글은 일반적인 정보 제공을 위한 것으로 의료 행위가 아닙니다. 실제 복용은 반드시 의사·약사와 상의하십시오.</p>
+  </section>
+
+  <ul class="drug-list">
+    {articles.map((a) => (
+      <li>
+        <a href={`/guide/${a.slug}/`}>{a.title}</a>
+        <p style="margin:6px 0 0;color:var(--text-muted);font-size:14px;white-space:normal;">{a.desc}</p>
+      </li>
+    ))}
+  </ul>
+</Layout>

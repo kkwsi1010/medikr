@@ -1,0 +1,31 @@
+---
+// 쿠팡파트너스 다이내믹 배너 — env(PUBLIC_COUPANG_ID + PUBLIC_COUPANG_TRACKING) 있을 때만 노출
+// partners.coupang.com 에서 배너 위젯 생성 시 id(숫자)와 trackingCode(AFxxxxxxx) 발급.
+// 발급 전에는 아무것도 렌더하지 않으므로 화면 변화 없음.
+interface Props {
+  width?: number;
+  height?: number;
+  template?: string;   // 'banner' | 'carousel'
+}
+const { width = 680, height = 140, template = 'carousel' } = Astro.props;
+const CID = import.meta.env.PUBLIC_COUPANG_ID as string | undefined;
+const TRACK = import.meta.env.PUBLIC_COUPANG_TRACKING as string | undefined;
+const cfg = CID && TRACK
+  ? JSON.stringify({ id: Number(CID), trackingCode: TRACK, template, width: String(width), height: String(height) })
+  : null;
+---
+{cfg && (
+  <aside class="coupang-wrap" aria-label="쿠팡파트너스 추천 상품">
+    <script is:inline src="https://ads-partners.coupang.com/g.js"></script>
+    <script is:inline set:html={`new PartnersCoupang.G(${cfg});`}></script>
+    <p class="coupang-disc">이 광고는 쿠팡파트너스 활동의 일환으로, 이에 따라 일정액의 수수료를 제공받습니다.</p>
+  </aside>
+)}
+
+<style>
+  .coupang-wrap { margin: 20px 0; text-align: center; }
+  .coupang-disc {
+    margin: 6px 0 0; font-size: 12px; color: var(--text-muted, #64748b);
+    line-height: 1.4;
+  }
+</style>

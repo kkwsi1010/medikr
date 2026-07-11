@@ -1,0 +1,28 @@
+---
+// 카카오 애드핏 광고 슬롯 — env(PUBLIC_ADFIT_UNIT) 가 있을 때만 노출
+// 광고단위 ID(DAN-xxxxxxxx)는 adfit.kakao.com 에서 사이트/단위 등록 후 발급.
+// 발급 전에는 아무것도 렌더하지 않으므로 화면 변화 없음.
+interface Props {
+  unit?: string;   // 광고단위 override (기본은 env)
+  width?: number;
+  height?: number;
+}
+const { unit, width = 300, height = 250 } = Astro.props;
+const UNIT = unit ?? (import.meta.env.PUBLIC_ADFIT_UNIT as string | undefined);
+---
+{UNIT && (
+  <div class="adfit-wrap">
+    <ins
+      class="kakao_ad_area"
+      style="display:none;"
+      data-ad-unit={UNIT}
+      data-ad-width={String(width)}
+      data-ad-height={String(height)}
+    ></ins>
+    <script is:inline async src="//t1.daumcdn.net/kas/static/ba.min.js"></script>
+  </div>
+)}
+
+<style>
+  .adfit-wrap { display: flex; justify-content: center; margin: 16px 0; }
+</style>

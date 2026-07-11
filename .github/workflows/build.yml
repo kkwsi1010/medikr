@@ -3,10 +3,7 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
-  schedule:
-    # 매일 06:00 KST (21:00 UTC) — 식약처 데이터 갱신 + D1 seed 재적재 + 배포.
-    # (cron.yml 의 빈커밋은 GITHUB_TOKEN push 라 이 workflow 를 트리거 못 해서 직접 schedule)
-    - cron: '0 21 * * *'
+  # 파킹: 매일 자동 재빌드(schedule) 제거. push / 수동(workflow_dispatch) 시에만 배포.
   workflow_dispatch:
 
 jobs:
@@ -36,6 +33,10 @@ jobs:
           PUBLIC_NAVER_VERIFY: ${{ vars.PUBLIC_NAVER_VERIFY }}
           PUBLIC_WEB3FORMS_KEY: ${{ vars.PUBLIC_WEB3FORMS_KEY }}
           PUBLIC_CF_ANALYTICS_TOKEN: ${{ vars.PUBLIC_CF_ANALYTICS_TOKEN }}
+          # 광고 네트워크 — Repo Variables 에 값 넣으면 자동 반영, 없으면 렌더 안 함
+          PUBLIC_ADFIT_UNIT: ${{ vars.PUBLIC_ADFIT_UNIT }}
+          PUBLIC_COUPANG_ID: ${{ vars.PUBLIC_COUPANG_ID }}
+          PUBLIC_COUPANG_TRACKING: ${{ vars.PUBLIC_COUPANG_TRACKING }}
           # 빌드 SHA → drug 페이지 캐시 네임스페이스. 빌드마다 새 키로 옛 캐시 응답 격리.
           PUBLIC_CACHE_VERSION: ${{ github.sha }}
         run: npm run build

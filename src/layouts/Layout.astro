@@ -25,7 +25,6 @@ const GA4_ID = import.meta.env.PUBLIC_GA4_ID as string | undefined;
 const ADSENSE_CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
 const NAVER_SITE_VERIFY = import.meta.env.PUBLIC_NAVER_VERIFY as string | undefined;
 const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | undefined;
-const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefined;
 const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string | undefined;
 ---
 <!DOCTYPE html>
@@ -343,6 +342,7 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
       </form>
       <nav class="site-nav" id="site-nav" aria-label="주요 메뉴">
         <a href="/search/" class={isActive('/search').trim()}>약 검색</a>
+        <a href="/guide/" class={isActive('/guide').trim()}>복약 가이드</a>
         <a href="/api/" class={`nav-highlight${isActive('/api')}`}>API</a>
       </nav>
     </div>
@@ -397,6 +397,7 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
     <p>출처: 식품의약품안전처 공공데이터 (e약은요·DUR·낱알식별·허가정보)</p>
     <p>본 사이트는 정보 제공 목적이며, 복용 전 반드시 의사·약사와 상의하십시오.</p>
     <p class="footer-links">
+      <a href="/guide/">복약 가이드</a>·
       <a href="/api/">API</a>·
       <a href="/contact/">문의하기</a>·
       <a href="/about/">운영자</a>·

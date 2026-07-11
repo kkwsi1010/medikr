@@ -4,6 +4,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import AdSlot from '../../components/AdSlot.astro';
+import CoupangSlot from '../../components/CoupangSlot.astro';
 import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit } from '../../lib/mfds';
@@ -326,6 +327,8 @@ const articleJsonLd = {
         )}
       </section>
     )}
+
+    <CoupangSlot />
   </article>
 </Layout>
 
