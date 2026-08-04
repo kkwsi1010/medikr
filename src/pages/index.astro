@@ -62,7 +62,6 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
         <div><strong>{totalDrugs.toLocaleString()}</strong><span>의약품</span></div>
         <div><strong>{totalIngredients.toLocaleString()}</strong><span>성분</span></div>
         <div><strong>6</strong><span>API endpoint</span></div>
-        <div><strong>0원</strong><span>무료 사용</span></div>
       </div>
     </div>
     <FreshBadge />
@@ -153,7 +152,7 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
   .hero-search button:hover { background: #92400e; }
 
   .hero-stats {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
     max-width: 600px;
     background: rgba(0,0,0,0.2); border-radius: 10px;
     padding: 4px; margin-bottom: 18px;
@@ -293,7 +292,7 @@ const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)
     .hero h1 { font-size: 32px; }
     .hero-search { flex-direction: column; }
     .hero-search button { padding: 14px; }
-    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .hero-stats { grid-template-columns: repeat(3, 1fr); }
     .tool-feature { grid-column: auto; }
   }
 </style>
