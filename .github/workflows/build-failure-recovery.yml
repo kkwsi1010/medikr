@@ -1,0 +1,79 @@
+name: Build 실패 자동 대응
+
+# Build & Deploy 가 실패하면:
+#   1차 실패 → 자동 재실행 (일시적 API 오류·네트워크 문제는 여기서 스스로 복구)
+#   재실행도 실패 → GitHub Issue 생성/갱신 (사람이 봐야 하는 문제만 올라옴)
+#
+# 2026-08 사고 대응으로 추가. 그전에는 빌드가 조용히 통과하며 빈 색인을 배포했고,
+# 이후 build-index.ts 가드로 실패하게 바뀌었기 때문에 실패 처리 경로가 필요해졌다.
+
+on:
+  workflow_run:
+    workflows: ['Build & Deploy']
+    types: [completed]
+
+permissions:
+  actions: write
+  issues: write
+
+jobs:
+  recover:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+      ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+      LABEL: ci-failure
+      TITLE: '빌드 실패 지속 — 식약처 데이터 수집 중단'
+    steps:
+      - name: 1차 실패 → 자동 재실행
+        if: github.event.workflow_run.run_attempt == 1
+        run: |
+          echo "run $RUN_ID 1차 실패 → 실패 job 재실행"
+          gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs"
+
+      - name: 재실행도 실패 → Issue 생성/갱신
+        if: github.event.workflow_run.run_attempt >= 2
+        run: |
+          # 라벨이 없으면 만든다 (이미 있으면 무시)
+          gh label create "$LABEL" --repo "$REPO" --color B60205 \
+            --description "CI 연속 실패 (자동 생성)" 2>/dev/null || true
+
+          # 동적 부분은 printf, 정적 markdown 은 quoted heredoc (백틱 보존)
+          {
+            printf '자동 재실행까지 실패했습니다. (attempt %s)\n\n' "$ATTEMPT"
+            printf '실행 로그: %s\n\n' "$RUN_URL"
+            cat <<'MARKDOWN'
+          ## 확인 순서
+
+          1. 로그에서 `[mfds] FAIL` 줄의 오류 코드를 본다
+          2. 코드 의미
+             - `code=22` 트래픽 초과 — 일일 호출한도. 다음 날 자동 회복
+             - `code=30` 등록되지 않은 서비스키 — 키 값이 틀림
+             - `code=31` 기한 만료 — data.go.kr 에서 활용기간 연장 필요
+             - `code=32` 등록되지 않은 IP — 활용신청에 IP 제한이 걸림
+          3. data.go.kr 마이페이지 → 활용신청 현황에서 4개 서비스 상태 확인
+             - DrbEasyDrugInfoService
+             - DrugPrdtPrmsnInfoService07
+             - MdcinGrnIdntfcInfoService03
+             - DURPrdlstInfoService03
+          4. 키가 바뀌었으면 Settings → Secrets → `MFDS_API_KEY` 갱신 후 재실행
+
+          빌드가 막혀 있는 동안 사이트는 마지막 성공 배포본으로 계속 서비스됩니다.
+          MARKDOWN
+          } > issue-body.md
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open --label "$LABEL" \
+            --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            echo "기존 이슈 #$EXISTING 에 코멘트"
+            gh issue comment "$EXISTING" --repo "$REPO" --body-file issue-body.md
+          else
+            echo "새 이슈 생성"
+            gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" \
+              --body-file issue-body.md
+          fi

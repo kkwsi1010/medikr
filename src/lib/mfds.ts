@@ -213,13 +213,85 @@ export async function fetchAll<T>(
   return all;
 }
 
+// 실패를 조용히 빈 배열로 넘기면 빌드가 초록불인 채로 빈 색인·사이트맵이 배포된다.
+// (2026-08 실제 사고: 9일 연속 success 로 약 43,229 URL 이 사이트맵에서 사라짐)
+// → 원인을 반드시 stderr 로 남긴다. serviceKey 는 절대 로그에 넣지 않는다.
+function logMfdsFail(service: string, endpoint: string, reason: string): void {
+  console.error(`[mfds] FAIL ${service}/${endpoint} — ${reason}`);
+}
+
+// data.go.kr 게이트웨이 오류는 서비스 응답과 형태가 다르고 HTTP 200 으로도 온다.
+// { OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg, returnAuthMsg, returnReasonCode } } }
+type GatewayHeader = { errMsg: string; returnAuthMsg: string; returnReasonCode: string };
+
+function gatewayErrorHeader(data: unknown): GatewayHeader | null {
+  const h = (data as { OpenAPI_ServiceResponse?: { cmmMsgHeader?: Partial<GatewayHeader> } })
+    ?.OpenAPI_ServiceResponse?.cmmMsgHeader;
+  if (!h) return null;
+  return {
+    errMsg: h.errMsg ?? '(없음)',
+    returnAuthMsg: h.returnAuthMsg ?? '(없음)',
+    returnReasonCode: h.returnReasonCode ?? '(없음)',
+  };
+}
+
+// 일시적 오류(네트워크 끊김, 5xx, 순간 호출제한)는 재시도로 스스로 복구된다.
+// 키 미등록(30)·기한만료(31)·IP 미등록(32)은 재시도해도 절대 안 풀리므로 즉시 포기한다.
+const RETRY_MAX = 3;
+const RETRY_BASE_MS = 1000;
+const PERMANENT_GATEWAY_CODES = new Set(['30', '31', '32']);
+
+type FetchOutcome<T> =
+  | { ok: true; items: T[]; totalCount: number }
+  | { ok: false; reason: string; retryable: boolean };
+
+async function attemptFetch<T>(url: string): Promise<FetchOutcome<T>> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return {
+        ok: false,
+        reason: `HTTP ${res.status} ${body.slice(0, 300)}`,
+        retryable: res.status === 429 || res.status >= 500,
+      };
+    }
+    const data = (await res.json()) as ApiResponse<T>;
+    const gw = gatewayErrorHeader(data);
+    if (gw) {
+      return {
+        ok: false,
+        reason: `게이트웨이 오류 code=${gw.returnReasonCode} ${gw.errMsg} (${gw.returnAuthMsg})`,
+        retryable: !PERMANENT_GATEWAY_CODES.has(gw.returnReasonCode),
+      };
+    }
+    if (data.header?.resultCode !== '00') {
+      return {
+        ok: false,
+        reason: `resultCode=${data.header?.resultCode ?? '(없음)'} resultMsg=${data.header?.resultMsg ?? '(없음)'}`,
+        retryable: false,
+      };
+    }
+    return { ok: true, items: data.body?.items ?? [], totalCount: data.body?.totalCount ?? 0 };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `예외 ${e instanceof Error ? e.message : String(e)}`,
+      retryable: true,
+    };
+  }
+}
+
 async function fetchApiWithBase<T>(
   base: string,
   service: string,
   endpoint: string,
   params: Record<string, string> = {}
 ): Promise<{ items: T[]; totalCount: number }> {
-  if (!HAS_KEY) return { items: [], totalCount: 0 };
+  if (!HAS_KEY) {
+    logMfdsFail(service, endpoint, 'MFDS_API_KEY 미설정');
+    return { items: [], totalCount: 0 };
+  }
   const query = new URLSearchParams({
     serviceKey: KEY!,
     type: 'json',
@@ -228,18 +300,18 @@ async function fetchApiWithBase<T>(
     ...params,
   });
   const url = `${base}/${service}/${endpoint}?${query.toString()}`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return { items: [], totalCount: 0 };
-    const data = (await res.json()) as ApiResponse<T>;
-    if (data.header?.resultCode !== '00') return { items: [], totalCount: 0 };
-    return {
-      items: data.body?.items ?? [],
-      totalCount: data.body?.totalCount ?? 0,
-    };
-  } catch {
-    return { items: [], totalCount: 0 };
+  let lastReason = '(원인 미상)';
+  for (let attempt = 1; attempt <= RETRY_MAX; attempt++) {
+    const r = await attemptFetch<T>(url);
+    if (r.ok) return { items: r.items, totalCount: r.totalCount };
+    lastReason = r.reason;
+    if (!r.retryable || attempt === RETRY_MAX) break;
+    const waitMs = RETRY_BASE_MS * attempt;
+    console.warn(`[mfds] retry ${attempt}/${RETRY_MAX - 1} ${service}/${endpoint} ${waitMs}ms — ${r.reason}`);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
+  logMfdsFail(service, endpoint, lastReason);
+  return { items: [], totalCount: 0 };
 }
 
 // DUR 카테고리별 전체 fetch (페이지별 prefetch)

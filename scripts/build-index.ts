@@ -21,6 +21,24 @@ const [drugs, pills, permits] = await Promise.all([
 
 console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length}`);
 
+// ─── 빈 데이터 배포 차단 ──────────────────────────────────
+// 식약처 API 가 실패해도 fetchAll 은 빈 배열을 돌려주므로 빌드가 그냥 통과한다.
+// 그대로 두면 (1) sitemap 이 43,229 → 0 으로 덮이고 (2) D1 seed 가 기존 행을
+// NULL 로 INSERT OR REPLACE 해서 멀쩡한 캐시까지 망가진다. (2026-08 실제 사고)
+// → 데이터가 정상 규모가 아니면 여기서 빌드를 죽여 배포 자체를 막는다.
+{
+  const MIN = { permits: 20000, drugs: 2000, pills: 10000 };
+  const actual = { permits: permits.length, drugs: drugs.length, pills: pills.length };
+  const short = (Object.keys(MIN) as Array<keyof typeof MIN>).filter((k) => actual[k] < MIN[k]);
+  if (short.length > 0) {
+    console.error('[build-index] 중단 — 식약처 데이터가 정상 규모가 아닙니다.');
+    for (const k of short) console.error(`  ${k}: ${actual[k]} (최소 ${MIN[k]})`);
+    console.error('  위 [mfds] FAIL 로그에서 원인(키 만료/트래픽 초과 등)을 확인하세요.');
+    console.error('  이대로 배포하면 사이트맵과 D1 캐시가 빈 값으로 덮어써집니다.');
+    process.exit(1);
+  }
+}
+
 // 진단: 받은 permits 의 ITEM_PERMIT_DATE 분포 (최근 누락 여부 확인)
 {
   const dates = permits.map((p) => p.ITEM_PERMIT_DATE ?? '').filter(Boolean).sort();
