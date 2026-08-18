@@ -12,7 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 25분이었으나 2026-08-18 실행이 17분(D1 seed 혼자 15분, 평소 13초)이라 여유가 없었다.
+    # build-index 재수집(최대 7분)까지 더해지면 seed 도중 잡이 잘려 배포가 통째로 날아간다.
+    timeout-minutes: 45
     permissions:
       contents: read
       deployments: write
@@ -75,6 +77,9 @@ jobs:
       - name: Seed D1 drug_cache (build-index 가 생성한 약 상세 적재)
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
+        # D1 이 느린 날 이 스텝이 잡 예산을 다 먹으면 뒤의 Pages 배포까지 못 한다.
+        # 캐시 갱신은 하루 미뤄도 되지만 배포는 미루면 안 되므로 여기서 끊는다.
+        timeout-minutes: 25
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

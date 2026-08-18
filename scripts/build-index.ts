@@ -13,13 +13,40 @@ console.log('[build-index] 식약처 5만 약 색인 생성 시작...');
 const t0 = Date.now();
 
 // 5만 약 전체 fetch (병렬 8 concurrent → 약 3분)
-const [drugs, pills, permits] = await Promise.all([
-  fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 500),
-  fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 500),
-  fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 600),
-]);
+//
+// 짧은 장애로 매일 빌드가 통째로 죽지 않도록, 규모 미달이면 몇 분 쉬고 통째로 다시 수집한다.
+// (2026-08-18 06:20 KST 사고: apis.data.go.kr 연결이 2분 넘게 안 돼 3개 서비스 전부
+//  'fetch failed'. mfds 재시도 창이 3초뿐이라 1차와 자동재실행이 같은 장애 구간에 걸려 죽었다.)
+// 재수집으로도 못 채우면 아래 '빈 데이터 배포 차단' 게이트가 빌드를 종료시킨다.
+const MIN_SIZE = { permits: 20000, drugs: 2000, pills: 10000 };
+const RECOLLECT_WAIT_MS = [2 * 60_000, 5 * 60_000];
 
-console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length}`);
+async function collect() {
+  const [drugs, pills, permits] = await Promise.all([
+    fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 500),
+    fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 500),
+    fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 600),
+  ]);
+  console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length}`);
+  return { drugs, pills, permits };
+}
+
+function isShort(c: Awaited<ReturnType<typeof collect>>): boolean {
+  return (
+    c.permits.length < MIN_SIZE.permits ||
+    c.drugs.length < MIN_SIZE.drugs ||
+    c.pills.length < MIN_SIZE.pills
+  );
+}
+
+let collected = await collect();
+for (const waitMs of RECOLLECT_WAIT_MS) {
+  if (!isShort(collected)) break;
+  console.warn(`[build-index] 수집 부족. ${waitMs / 60_000}분 뒤 재수집`);
+  await new Promise((resolve) => setTimeout(resolve, waitMs));
+  collected = await collect();
+}
+const { drugs, pills, permits } = collected;
 
 // ─── 빈 데이터 배포 차단 ──────────────────────────────────
 // 식약처 API 가 실패해도 fetchAll 은 빈 배열을 돌려주므로 빌드가 그냥 통과한다.
