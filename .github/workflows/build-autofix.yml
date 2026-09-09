@@ -50,7 +50,16 @@ jobs:
           HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
           JOB_ID=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --jq '.jobs[0].id')
-          gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" > failure-full.log 2>/dev/null || true
+          # 잡이 끝난 직후에는 로그가 아직 안 올라와서 빈 응답이 온다.
+          # (2026-09-09 실측: 잡 종료 4초 뒤 호출에 0 bytes)
+          # 빈 로그로 Claude 를 부르면 근거 없이 코드를 고치게 되므로 반드시 받아낸다.
+          : > failure-full.log
+          for i in 1 2 3 4 5; do
+            gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" > failure-full.log 2>/dev/null || true
+            [ -s failure-full.log ] && break
+            echo "로그 아직 없음. ${i}회차, 15초 대기"
+            sleep 15
+          done
           # 로그가 크면 뒤쪽만 쓴다. 실패 원인은 항상 끝부분에 있다.
           tail -c 40000 failure-full.log > failure.log
           echo "로그 $(wc -c < failure.log) bytes"
@@ -58,6 +67,8 @@ jobs:
           SKIP=""
           if [ "$HAS_KEY" != "true" ]; then
             SKIP="ANTHROPIC_API_KEY 시크릿이 없다. Settings > Secrets 에 추가해야 동작한다"
+          elif [ ! -s failure.log ]; then
+            SKIP="실패 로그를 못 받았다. 근거 없이 코드를 고치지 않는다"
           elif grep -q '예외 fetch failed' failure.log; then
             SKIP="식약처 API 네트워크 단절 (외부 장애). 고칠 코드가 없다"
           elif grep -qE 'code=(30|31|32)' failure.log; then
