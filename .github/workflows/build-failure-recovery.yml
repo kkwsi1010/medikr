@@ -1,7 +1,7 @@
 name: Build 실패 자동 대응
 
 # Build & Deploy 가 실패하면:
-#   1차 실패 → 자동 재실행 (일시적 API 오류·네트워크 문제는 여기서 스스로 복구)
+#   1차 실패 → 30분 뒤 자동 재실행 (일시적 API 오류·네트워크 문제는 여기서 스스로 복구)
 #   재실행도 실패 → GitHub Issue 생성/갱신 (사람이 봐야 하는 문제만 올라옴)
 #
 # 2026-08 사고 대응으로 추가. 그전에는 빌드가 조용히 통과하며 빈 색인을 배포했고,
@@ -29,10 +29,17 @@ jobs:
       LABEL: ci-failure
       TITLE: '빌드 실패 지속 — 식약처 데이터 수집 중단'
     steps:
-      - name: 1차 실패 → 자동 재실행
+      - name: 1차 실패 → 30분 뒤 자동 재실행
         if: github.event.workflow_run.run_attempt == 1
+        timeout-minutes: 45
         run: |
-          echo "run $RUN_ID 1차 실패 → 실패 job 재실행"
+          # 즉시 재실행하면 같은 장애 구간에 그대로 걸린다.
+          # 2026-09-08 사고: apis.data.go.kr 연결 불가가 18분 넘게 이어져
+          # 1차(23:14~23:23)도, 40초 뒤 시작한 재실행(23:24~23:32)도 함께 죽었다.
+          # 다음 날 정기 빌드는 그냥 성공했으므로 기다리면 풀리는 종류의 장애다.
+          # 재실행을 장애 구간 밖으로 밀어내려고 여기서 30분 잔다.
+          echo "run $RUN_ID 1차 실패. 30분 뒤 실패 job 재실행"
+          sleep 1800
           gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs"
 
       - name: 재실행도 실패 → Issue 생성/갱신
