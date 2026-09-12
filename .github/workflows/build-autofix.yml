@@ -24,6 +24,9 @@ permissions:
   contents: write
   issues: write
   actions: read
+  # GitHub 이 서명한 OIDC 토큰을 받기 위해 필요하다. 이것이 없으면
+  # ACTIONS_ID_TOKEN_REQUEST_URL 자체가 러너에 주어지지 않는다.
+  id-token: write
 
 jobs:
   autofix:
@@ -38,6 +41,14 @@ jobs:
       REPO: ${{ github.repository }}
       RUN_ID: ${{ github.event.workflow_run.id }}
       RUN_URL: ${{ github.event.workflow_run.html_url }}
+      # Workload Identity Federation. 셋 다 비밀이 아니므로 Secrets 가 아니라
+      # Variables 에 넣는다. 값이 비어 있으면 아래에서 API 키 경로로 넘어간다.
+      # Console 의 Settings > Workload identity > Connect workload 가 만들어 준다.
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      # 페더레이션 규칙이 여러 워크스페이스를 덮을 때만 필요하다. 비어 있어도 된다.
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,6 +59,7 @@ jobs:
         id: triage
         env:
           HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_WIF: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID != '' && vars.ANTHROPIC_ORGANIZATION_ID != '' && vars.ANTHROPIC_SERVICE_ACCOUNT_ID != '' }}
         run: |
           JOB_ID=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --jq '.jobs[0].id')
           # 잡이 끝난 직후에는 로그가 아직 안 올라와서 빈 응답이 온다.
@@ -65,8 +77,8 @@ jobs:
           echo "로그 $(wc -c < failure.log) bytes"
 
           SKIP=""
-          if [ "$HAS_KEY" != "true" ]; then
-            SKIP="ANTHROPIC_API_KEY 시크릿이 없다. Settings > Secrets 에 추가해야 동작한다"
+          if [ "$HAS_WIF" != "true" ] && [ "$HAS_KEY" != "true" ]; then
+            SKIP="Claude 자격증명이 없다. Workload Identity Federation 변수 3개(Variables) 또는 ANTHROPIC_API_KEY(Secrets) 중 하나가 필요하다"
           elif [ ! -s failure.log ]; then
             SKIP="실패 로그를 못 받았다. 근거 없이 코드를 고치지 않는다"
           elif grep -q '예외 fetch failed' failure.log; then
@@ -89,6 +101,50 @@ jobs:
         if: steps.triage.outputs.skip == ''
         run: npm install --no-audit --no-fund
 
+      # GitHub 이 서명한 OIDC 토큰을 Anthropic 단기 토큰으로 교환한다.
+      # 고정 API 키를 저장할 필요가 없고, 받은 토큰은 몇 분 뒤 만료된다.
+      #
+      # SDK 는 페더레이션 env 만 넣으면 교환과 갱신을 알아서 하지만, 여기서는
+      # 직접 교환해서 ANTHROPIC_AUTH_TOKEN 으로 넘긴다. claude --bare 가 WIF
+      # 환경변수를 읽는지 문서에 명시돼 있지 않아 그 동작에 기대지 않으려는 것이다.
+      # 대신 토큰 자동 갱신도 없으므로, 페더레이션 규칙의 token_lifetime_seconds 를
+      # Claude 실행 시간보다 넉넉히(3600 권장) 잡아야 한다. 마법사 기본값은 600 이다.
+      - name: OIDC 토큰을 Anthropic 토큰으로 교환
+        id: wif
+        if: steps.triage.outputs.skip == '' && vars.ANTHROPIC_FEDERATION_RULE_ID != ''
+        run: |
+          JWT=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value)
+          if [ -z "$JWT" ] || [ "$JWT" = "null" ]; then
+            echo "GitHub OIDC 토큰을 못 받았다. permissions 에 id-token: write 가 있는지 확인" >&2
+            exit 1
+          fi
+
+          BODY=$(jq -n \
+            --arg a "$JWT" \
+            --arg r "$ANTHROPIC_FEDERATION_RULE_ID" \
+            --arg o "$ANTHROPIC_ORGANIZATION_ID" \
+            --arg s "$ANTHROPIC_SERVICE_ACCOUNT_ID" \
+            --arg w "$ANTHROPIC_WORKSPACE_ID" \
+            '{grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",
+              assertion:$a, federation_rule_id:$r, organization_id:$o,
+              service_account_id:$s}
+             + (if $w == "" then {} else {workspace_id:$w} end)')
+
+          RESP=$(curl -sS https://api.anthropic.com/v1/oauth/token \
+            -H "content-type: application/json" --data "$BODY")
+          TOKEN=$(echo "$RESP" | jq -r '.access_token // empty')
+          if [ -z "$TOKEN" ]; then
+            # 교환 실패는 401 authentication_error 하나로만 오고 사유를 안 알려준다.
+            # 실제 사유는 Console 의 Workload identity > History 에 남는다.
+            echo "토큰 교환 실패. 응답: $(echo "$RESP" | jq -c '.')" >&2
+            echo "Console 의 Settings > Workload identity > History 에서 거부 사유를 확인하라" >&2
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "교환 성공. 유효기간 $(echo "$RESP" | jq -r '.expires_in')초"
+
       # claude-code-action 대신 헤드리스 CLI 를 쓴다.
       # 액션은 issue·PR 이벤트를 전제로 모드를 자동 판별하고 workflow_dispatch 는
       # 문서에 'coming soon' 으로 적혀 있어 workflow_run 에서 도는지 보장이 없다.
@@ -100,8 +156,19 @@ jobs:
       - name: Claude 가 원인 분석 후 수정
         if: steps.triage.outputs.skip == ''
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WIF_TOKEN: ${{ steps.wif.outputs.token }}
+          STATIC_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          # ANTHROPIC_API_KEY 는 빈 문자열이어도 다른 자격증명을 가린다.
+          # 그래서 env 에 미리 깔지 않고 쓸 것 하나만 여기서 export 한다.
+          if [ -n "$WIF_TOKEN" ]; then
+            export ANTHROPIC_AUTH_TOKEN="$WIF_TOKEN"
+            echo "페더레이션 단기 토큰으로 인증한다"
+          else
+            export ANTHROPIC_API_KEY="$STATIC_KEY"
+            echo "고정 API 키로 인증한다"
+          fi
+
           cat > "$RUNNER_TEMP/prompt.md" <<'PROMPT'
           medikr.kr 의 GitHub Actions 빌드가 실패했다. 원인을 찾아 코드를 고쳐라.
 
