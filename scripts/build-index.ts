@@ -39,6 +39,27 @@ function isShort(c: Awaited<ReturnType<typeof collect>>): boolean {
   );
 }
 
+// 워크플로우의 actions/cache 가 빌드 전에 직전 성공 색인을 복원해 둔다.
+// 그것이 쓸 만한지 본다. 약 수가 기준 이상이고 D1 seed, sitemap, 샘플까지
+// 갖춰져 있어야 그대로 배포해도 사이트가 멀쩡하다.
+function snapshotDrugCount(): number {
+  try {
+    const raw = fs.readFileSync(path.join(OUT_DIR, 'drug-names.json'), 'utf-8');
+    return Object.keys(JSON.parse(raw) as Record<string, string>).length;
+  } catch {
+    return 0;
+  }
+}
+function hasUsableSnapshot(): boolean {
+  const required = [
+    path.join(process.cwd(), 'migrations', 'seed-drugs.sql'),
+    path.join(process.cwd(), 'public', 'sitemap.xml'),
+    path.join(OUT_DIR, 'prefetch-sample.json'),
+  ];
+  if (required.some((f) => !fs.existsSync(f))) return false;
+  return snapshotDrugCount() >= MIN_SIZE.permits;
+}
+
 let collected = await collect();
 for (const waitMs of RECOLLECT_WAIT_MS) {
   if (!isShort(collected)) break;
@@ -46,6 +67,20 @@ for (const waitMs of RECOLLECT_WAIT_MS) {
   await new Promise((resolve) => setTimeout(resolve, waitMs));
   collected = await collect();
 }
+
+// 수집이 끝내 실패했는데 직전 성공 색인이 남아 있으면 그것으로 배포한다.
+// 식약처 API 는 GitHub 러너에서 간헐적으로 막힌다 (2026-08-18 약 2분,
+// 09-08 약 18분, 09-09 60분 이상). 허가 목록은 하루 이틀 묵어도 되는
+// 데이터라, 배포를 통째로 멈추는 것보다 어제 색인으로 내보내는 편이 낫다.
+// 빈 데이터를 막는다는 원래 목적은 그대로다. 스냅샷이 없거나 규모 미달이면
+// 아래 '빈 데이터 배포 차단' 게이트가 그대로 빌드를 죽인다.
+if (isShort(collected) && hasUsableSnapshot()) {
+  console.warn('[build-index] 수집 실패. 직전 성공 색인을 그대로 사용한다.');
+  console.warn(`  색인 약 ${snapshotDrugCount()} 종. 재생성 없이 astro build 로 넘어간다.`);
+  console.warn('  데이터만 묵은 것이고 사이트는 정상 배포된다.');
+  process.exit(0);
+}
+
 const { drugs, pills, permits } = collected;
 
 // ─── 빈 데이터 배포 차단 ──────────────────────────────────
@@ -167,6 +202,21 @@ fs.writeFileSync(path.join(OUT_DIR, 'class-idx.json'), JSON.stringify(classIdx))
 fs.writeFileSync(path.join(OUT_DIR, 'entp-idx.json'), JSON.stringify(entpIdx));
 fs.writeFileSync(path.join(OUT_DIR, 'search-idx.json'), JSON.stringify(searchIdx));
 fs.writeFileSync(path.join(OUT_DIR, 'popular-seq.json'), JSON.stringify(popularSeq));
+
+// 홈, 검색, RSS 가 쓰는 500 약 샘플.
+// 예전에는 이 세 페이지가 빌드 중에 prefetchAll() 로 식약처 API 를 다시 불렀다.
+// 그러면 API 가 죽은 날 검색 페이지가 빈 목록으로 배포된다. 직전 색인을
+// 재사용하는 의미가 없어지므로 여기서 파일로 떨궈 빌드가 API 에 의존하지 않게 한다.
+// 내용과 순서는 prefetchAll() 이 주던 것과 같다 (e약은요 앞에서 500개).
+const prefetchSample = drugs.slice(0, 500).map((d) => ({
+  seq: d.itemSeq,
+  name: d.itemName,
+  entp: d.entpName,
+  ingr: permitMap.get(d.itemSeq)?.ITEM_INGR_NAME ?? '',
+  date: permitMap.get(d.itemSeq)?.ITEM_PERMIT_DATE ?? '',
+  efcy: (d.efcyQesitm ?? '').slice(0, 300),
+}));
+fs.writeFileSync(path.join(OUT_DIR, 'prefetch-sample.json'), JSON.stringify(prefetchSample));
 
 const sizes = {
   'drug-names': fs.statSync(path.join(OUT_DIR, 'drug-names.json')).size,

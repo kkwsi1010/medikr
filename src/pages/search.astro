@@ -1,17 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AdSlot from '../components/AdSlot.astro';
-import { prefetchAll } from '../lib/mfds';
 import drugNamesRaw from '../data/drug-names.json';
+import sampleRaw from '../data/prefetch-sample.json';
 
 type SearchItem = { itemSeq: string; itemName: string; entpName: string; ingredient?: string };
+type Sample = { seq: string; name: string; entp: string; ingr: string; date: string; efcy: string };
 
-const { drugs, permitMap } = await prefetchAll();
-const all: SearchItem[] = drugs.map((d) => ({
-  itemSeq: d.itemSeq,
-  itemName: d.itemName,
-  entpName: d.entpName,
-  ingredient: permitMap.get(d.itemSeq)?.ITEM_INGR_NAME,
+// 예전에는 여기서 prefetchAll() 로 빌드 중에 식약처 API 를 불렀다.
+// API 가 죽으면 검색 목록이 빈 채로 배포돼서 build-index 가 떨군 샘플을 쓴다.
+// 내용은 같고 (e약은요 앞에서 500개) 빌드가 외부 API 에 의존하지 않는다.
+const all: SearchItem[] = (sampleRaw as Sample[]).map((d) => ({
+  itemSeq: d.seq,
+  itemName: d.name,
+  entpName: d.entp,
+  ingredient: d.ingr || undefined,
 }));
 // 전체 5만 약 카운트 (build-index 색인)
 const totalDrugs = Object.keys(drugNamesRaw as Record<string, string>).length;

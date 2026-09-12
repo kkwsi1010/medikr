@@ -117,13 +117,13 @@ if (DB) {
 // Cloudflare edge 캐시 (24h TTL)
 Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800');
 
-// 약 사진 fallback: e약은요 itemImage > 낱알식별 ITEM_IMAGE > 식약처 nedrug 직접 URL
-function buildNedrugImageUrl(itemSeq: string): string {
-  // 식약처 의약품안전나라의 일반적인 이미지 패턴 (보장 없음, 일부 약만)
-  return `https://nedrug.mfds.go.kr/pbp/cmn/itemImageDownload/${itemSeq}`;
-}
+// 약 사진: e약은요 itemImage 아니면 낱알식별 ITEM_IMAGE.
+// itemSeq 로 nedrug 주소를 만드는 fallback 이 있었으나 전부 404 라서 지웠다.
+// 실제 사진 주소는 itemImageDownload/1OKRXo9l4D5 처럼 별도 토큰이고
+// itemSeq 로는 한 건도 맞지 않는다. onerror 로 가려져 안 보였을 뿐,
+// 사진 없는 약(주사제, 연고, 원료 등 낱알식별에 없는 제형)마다
+// 헛된 요청이 한 건씩 나가고 JS 를 끄면 깨진 이미지가 떴다.
 const imageSrc = drug.itemImage || pill?.ITEM_IMAGE;
-const fallbackImageSrc = !imageSrc ? buildNedrugImageUrl(drug.itemSeq) : null;
 // 식약처 텍스트 정리 — \n\n+ → \n (빈 줄 제거), \xa0 → 공백, trim
 function compact(text: string): string {
   return text
@@ -198,17 +198,9 @@ const articleJsonLd = {
       <FavoriteButton itemSeq={drug.itemSeq} itemName={drug.itemName} />
     </div>
 
-    {imageSrc ? (
+    {imageSrc && (
       <img src={imageSrc} alt={`${drug.itemName} 이미지`} loading="lazy" class="drug-photo" />
-    ) : fallbackImageSrc ? (
-      <img
-        src={fallbackImageSrc}
-        alt={`${drug.itemName} 이미지`}
-        loading="lazy"
-        class="drug-photo"
-        onerror="this.style.display='none'"
-      />
-    ) : null}
+    )}
 
     <AdSlot slot="1234567890" format="auto" />
 

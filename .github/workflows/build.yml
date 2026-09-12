@@ -29,6 +29,27 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      # 직전 성공 빌드의 색인을 복원한다.
+      # 식약처 API 가 러너에서 간헐적으로 막히는데(2026-08-18 약 2분, 09-08 약 18분,
+      # 09-09 60분 이상) 그때마다 배포가 통째로 멈추는 것을 막는다.
+      # 수집이 성공하면 build-index 가 전부 덮어쓰므로 이 복원본은 버려진다.
+      # 수집이 실패했을 때만 build-index 가 이것을 그대로 쓰고 배포로 넘어간다.
+      #
+      # key 에 run_id 를 넣어 매번 새로 저장한다. 그래야 restore-keys 접두어
+      # 매칭으로 항상 가장 최근 스냅샷이 복원되고, 캐시가 7일 미사용으로
+      # evict 되는 일도 없다.
+      - name: 직전 성공 색인 복원
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/data
+            public/sitemap.xml
+            public/sitemap-drugs-*.xml
+            migrations/seed-drugs.sql
+          key: mfds-index-${{ github.run_id }}
+          restore-keys: |
+            mfds-index-
+
       - name: Astro build
         env:
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}

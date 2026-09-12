@@ -1,5 +1,9 @@
 import type { APIContext } from 'astro';
-import { prefetchAll, type EasyDrug } from '../lib/mfds';
+import sampleRaw from '../data/prefetch-sample.json';
+
+// 예전에는 prefetchAll() 로 빌드 중에 식약처 API 를 불렀다.
+// API 가 죽은 날 RSS 가 빈 채로 배포되므로 build-index 가 떨군 샘플을 쓴다.
+type Sample = { seq: string; name: string; entp: string; ingr: string; date: string; efcy: string };
 
 function escapeXml(s: string): string {
   return s.replace(/[<>&'"]/g, (c) => {
@@ -16,11 +20,9 @@ function escapeXml(s: string): string {
 
 export async function GET(context: APIContext) {
   const site = context.site?.href ?? 'https://medikr.kr/';
-  const { drugs, permitMap } = await prefetchAll();
-
   // 허가일자 desc 정렬, 최근 50개
-  const recent = [...drugs]
-    .map((d) => ({ d, date: permitMap.get(d.itemSeq)?.ITEM_PERMIT_DATE ?? '' }))
+  const recent = [...(sampleRaw as Sample[])]
+    .map((d) => ({ d, date: d.date }))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .slice(0, 50);
 
@@ -45,15 +47,15 @@ export async function GET(context: APIContext) {
     <atom:link href="${site}rss.xml" rel="self" type="application/rss+xml" />
 ${recent
   .map(({ d, date }) => {
-    const link = `${site}약/${encodeURIComponent(d.itemSeq)}/`;
-    const desc = (d.efcyQesitm ?? `${d.itemName} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 200);
+    const link = `${site}약/${encodeURIComponent(d.seq)}/`;
+    const desc = (d.efcy || `${d.name} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 200);
     return `    <item>
-      <title>${escapeXml(d.itemName)}</title>
+      <title>${escapeXml(d.name)}</title>
       <link>${link}</link>
       <description>${escapeXml(desc)}</description>
       <guid isPermaLink="true">${link}</guid>
       <pubDate>${fmtRFC822(date)}</pubDate>
-      <category>${escapeXml(d.entpName ?? '의약품')}</category>
+      <category>${escapeXml(d.entp || '의약품')}</category>
     </item>`;
   })
   .join('\n')}
