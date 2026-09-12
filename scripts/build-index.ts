@@ -55,6 +55,7 @@ function hasUsableSnapshot(): boolean {
     path.join(process.cwd(), 'migrations', 'seed-drugs.sql'),
     path.join(process.cwd(), 'public', 'sitemap.xml'),
     path.join(OUT_DIR, 'prefetch-sample.json'),
+    path.join(OUT_DIR, 'drug-index.json'),
   ];
   if (required.some((f) => !fs.existsSync(f))) return false;
   return snapshotDrugCount() >= MIN_SIZE.permits;
@@ -217,6 +218,13 @@ const prefetchSample = drugs.slice(0, 500).map((d) => ({
   efcy: (d.efcyQesitm ?? '').slice(0, 300),
 }));
 fs.writeFileSync(path.join(OUT_DIR, 'prefetch-sample.json'), JSON.stringify(prefetchSample));
+
+// 헤더 검색 자동완성용 e약은요 전체 목록.
+// /api/drug-index.json 은 output:'static' 이라 빌드 때 구워진다. 예전에는 그
+// 엔드포인트가 prefetchAll() 을 불렀는데, API 가 죽은 날 빈 배열이 구워져서
+// 모든 페이지의 헤더 검색이 조용히 죽는다. 여기서 파일로 떨군다.
+const drugIndex = drugs.map((d) => ({ s: d.itemSeq, n: d.itemName, e: d.entpName }));
+fs.writeFileSync(path.join(OUT_DIR, 'drug-index.json'), JSON.stringify(drugIndex));
 
 const sizes = {
   'drug-names': fs.statSync(path.join(OUT_DIR, 'drug-names.json')).size,
