@@ -268,7 +268,8 @@ jobs:
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}
           # 러너에서 data.go.kr 직접 접근은 막혀 있다. 중계 없이 검증하면 스냅샷도 없는
           # 새 체크아웃이라 게이트에 걸려 수정이 옳아도 항상 실패한다.
-          MFDS_RELAY_URL: https://medikr.kr/api/mfds-relay
+          # medikr.kr 은 봇 차단이 러너를 챌린지하므로 pages.dev 로 간다 (build.yml 참고).
+          MFDS_RELAY_URL: https://medikr.pages.dev/api/mfds-relay
           MFDS_RELAY_SECRET: ${{ secrets.MFDS_RELAY_SECRET }}
           PUBLIC_CACHE_VERSION: autofix-${{ github.run_id }}
         run: npm run build

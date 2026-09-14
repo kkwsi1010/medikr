@@ -53,7 +53,10 @@ jobs:
           # data.go.kr 이 러너 IP 를 막아서 수집은 이미 배포된 Cloudflare 중계를 거친다.
           # 중계는 '직전 배포본'이 받으므로, 시크릿을 바꾸면 한 번은 수집이 실패하고
           # 다음 빌드부터 맞는다 (그 사이는 스냅샷이 메운다).
-          MFDS_RELAY_URL: https://medikr.kr/api/mfds-relay
+          # medikr.kr 이 아니라 pages.dev 로 간다. medikr.kr 존의 Cloudflare 봇 차단이
+          # 데이터센터 IP 인 러너에 'Just a moment...' 챌린지(HTTP 403)를 돌려준다.
+          # 존 설정은 pages.dev 에는 걸리지 않고, 중계는 시크릿으로 따로 막혀 있다.
+          MFDS_RELAY_URL: https://medikr.pages.dev/api/mfds-relay
           MFDS_RELAY_SECRET: ${{ secrets.MFDS_RELAY_SECRET }}
           PUBLIC_ADSENSE_CLIENT: ${{ vars.PUBLIC_ADSENSE_CLIENT }}
           PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
