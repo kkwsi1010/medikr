@@ -21,11 +21,19 @@ const t0 = Date.now();
 const MIN_SIZE = { permits: 20000, drugs: 2000, pills: 10000 };
 const RECOLLECT_WAIT_MS = [2 * 60_000, 5 * 60_000];
 
+// data.go.kr 이 GitHub 러너 IP 를 막아서 수집은 Cloudflare 중계(/api/mfds-relay)를 거친다.
+// 두 값이 없으면(로컬 실행 등) 예전처럼 data.go.kr 로 직접 간다.
+const RELAY_URL = process.env.MFDS_RELAY_URL || undefined;
+const RELAY_HEADERS = RELAY_URL && process.env.MFDS_RELAY_SECRET
+  ? { 'x-relay-secret': process.env.MFDS_RELAY_SECRET }
+  : undefined;
+console.log(`  수집 경로: ${RELAY_URL ? `Cloudflare 중계 ${RELAY_URL}` : 'data.go.kr 직접'}`);
+
 async function collect() {
   const [drugs, pills, permits] = await Promise.all([
-    fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 500),
-    fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 500),
-    fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 600),
+    fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 500, RELAY_URL, RELAY_HEADERS),
+    fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 500, RELAY_URL, RELAY_HEADERS),
+    fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 600, RELAY_URL, RELAY_HEADERS),
   ]);
   console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length}`);
   return { drugs, pills, permits };
@@ -61,6 +69,31 @@ function hasUsableSnapshot(): boolean {
   return snapshotDrugCount() >= MIN_SIZE.permits;
 }
 
+// 스냅샷 재사용이 장애를 가리는 동안 데이터가 얼마나 묵었는지 추적한다.
+// 2026-09-14 발견: 러너 차단으로 이틀 넘게 수집이 실패했는데 스냅샷 덕에 빌드가
+// 전부 초록불이라 복구·자동수정·이슈 어느 것도 돌지 않았다. 몇 주가 묵어도 모를 구조였다.
+// 여기서는 판정만 GITHUB_OUTPUT 으로 내보내고, 워크플로우 마지막 스텝이 잡을 실패시킨다.
+// 배포를 막지 않고 알림만 되살리려는 것이다. 묵은 데이터라도 서비스는 계속하는 편이 낫다.
+const STALE_AFTER_HOURS = 72;
+const COLLECTED_AT = path.join(OUT_DIR, 'collected-at.json');
+
+function snapshotAgeHours(): number | null {
+  try {
+    const { at } = JSON.parse(fs.readFileSync(COLLECTED_AT, 'utf-8')) as { at: string };
+    const ms = Date.now() - Date.parse(at);
+    return Number.isFinite(ms) ? ms / 3_600_000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function reportIndexStatus(stale: boolean, detail: string): void {
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) fs.appendFileSync(out, `index_stale=${stale ? 1 : 0}\nindex_detail=${detail}\n`);
+  const summary = process.env.GITHUB_STEP_SUMMARY;
+  if (summary) fs.appendFileSync(summary, `### 식약처 색인\n${detail}\n`);
+}
+
 let collected = await collect();
 for (const waitMs of RECOLLECT_WAIT_MS) {
   if (!isShort(collected)) break;
@@ -76,9 +109,15 @@ for (const waitMs of RECOLLECT_WAIT_MS) {
 // 빈 데이터를 막는다는 원래 목적은 그대로다. 스냅샷이 없거나 규모 미달이면
 // 아래 '빈 데이터 배포 차단' 게이트가 그대로 빌드를 죽인다.
 if (isShort(collected) && hasUsableSnapshot()) {
+  const age = snapshotAgeHours();
+  // 수집 시각 기록이 없는 스냅샷은 이 기능 이전 것이라 나이를 모른다. 모르면 묵은 것으로 본다.
+  // 여기서 빌드를 죽이지 않으므로 배포(와 중계 엔드포인트 반영)는 막히지 않는다.
+  const stale = age === null || age > STALE_AFTER_HOURS;
+  const ageText = age === null ? '수집 시각 기록 없음' : `${Math.floor(age)}시간 전 수집`;
   console.warn('[build-index] 수집 실패. 직전 성공 색인을 그대로 사용한다.');
-  console.warn(`  색인 약 ${snapshotDrugCount()} 종. 재생성 없이 astro build 로 넘어간다.`);
-  console.warn('  데이터만 묵은 것이고 사이트는 정상 배포된다.');
+  console.warn(`  색인 약 ${snapshotDrugCount()} 종, ${ageText}. 재생성 없이 astro build 로 넘어간다.`);
+  if (stale) console.warn(`  ${STALE_AFTER_HOURS}시간 기준을 넘었다. 배포는 하되 잡은 마지막에 실패 처리된다.`);
+  reportIndexStatus(stale, `수집 실패, 직전 색인 재사용 (${ageText})`);
   process.exit(0);
 }
 
@@ -225,6 +264,11 @@ fs.writeFileSync(path.join(OUT_DIR, 'prefetch-sample.json'), JSON.stringify(pref
 // 모든 페이지의 헤더 검색이 조용히 죽는다. 여기서 파일로 떨군다.
 const drugIndex = drugs.map((d) => ({ s: d.itemSeq, n: d.itemName, e: d.entpName }));
 fs.writeFileSync(path.join(OUT_DIR, 'drug-index.json'), JSON.stringify(drugIndex));
+
+// 스냅샷 나이 판정의 기준점. 다른 색인 파일과 같은 자리에서 써야 중간에 죽었을 때
+// '새 시각 + 옛 데이터' 조합이 캐시에 남지 않는다.
+fs.writeFileSync(COLLECTED_AT, JSON.stringify({ at: new Date().toISOString() }));
+reportIndexStatus(false, `신선 수집 (e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${permits.length})`);
 
 const sizes = {
   'drug-names': fs.statSync(path.join(OUT_DIR, 'drug-names.json')).size,

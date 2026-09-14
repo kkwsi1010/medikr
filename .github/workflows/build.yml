@@ -50,6 +50,11 @@ jobs:
         id: build
         env:
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}
+          # data.go.kr 이 러너 IP 를 막아서 수집은 이미 배포된 Cloudflare 중계를 거친다.
+          # 중계는 '직전 배포본'이 받으므로, 시크릿을 바꾸면 한 번은 수집이 실패하고
+          # 다음 빌드부터 맞는다 (그 사이는 스냅샷이 메운다).
+          MFDS_RELAY_URL: https://medikr.kr/api/mfds-relay
+          MFDS_RELAY_SECRET: ${{ secrets.MFDS_RELAY_SECRET }}
           PUBLIC_ADSENSE_CLIENT: ${{ vars.PUBLIC_ADSENSE_CLIENT }}
           PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
           PUBLIC_GOOGLE_VERIFY: ${{ vars.PUBLIC_GOOGLE_VERIFY }}
@@ -128,6 +133,25 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"deployment_configs":{"production":{"d1_databases":{"DB":{"id":"e5e3974c-98ae-45a0-bbaa-e37a9043dfbe"}}}}}'
 
+      # 수집 중계(/api/mfds-relay)가 인증에 쓰는 시크릿을 Pages 런타임에 올린다.
+      # vite define 으로 번들에 박지 않는 이유: dist 가 공개 레포의 Actions 아티팩트로
+      # 올라가서 번들 안의 문자열은 누구나 꺼내 볼 수 있다.
+      # Pages 시크릿은 다음 배포부터 반영되므로 반드시 Deploy 앞에 둔다.
+      # 같은 값을 매번 다시 넣는 것이라 멱등하다.
+      - name: 수집 중계 시크릿을 Pages 에 반영
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MFDS_RELAY_SECRET: ${{ secrets.MFDS_RELAY_SECRET }}
+        run: |
+          if [ -z "$MFDS_RELAY_SECRET" ]; then
+            echo "::warning::MFDS_RELAY_SECRET 시크릿이 없다. 중계가 모든 요청을 거부한다"
+            exit 0
+          fi
+          printf '%s' "$MFDS_RELAY_SECRET" | npx wrangler pages secret put MFDS_RELAY_SECRET --project-name=medikr
+
       - name: Deploy to Cloudflare Pages
         if: github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@v4
@@ -156,3 +180,18 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"host\":\"medikr.kr\",\"key\":\"$KEY\",\"keyLocation\":\"https://medikr.kr/$KEY.txt\",\"urlList\":$URLS}" \
             -w "IndexNow HTTP %{http_code}\n"
+
+      # 스냅샷으로 넘어간 날이 누적되면 여기서 잡을 실패시킨다.
+      # 2026-09-14 발견: 러너 차단으로 이틀 넘게 수집이 실패했는데 스냅샷 덕에 빌드가
+      # 전부 초록불이라 복구, 자동수정, 이슈 어느 것도 돌지 않았다.
+      # 맨 끝에 두는 이유는 배포를 막지 않고 알림만 되살리려는 것이다.
+      # 여기서 실패하면 build-failure-recovery 가 30분 뒤 재실행하고, 그래도 묵어 있으면
+      # 이슈가 열린다. 자동수정은 로그의 fetch failed 를 보고 개입하지 않는다.
+      - name: 색인이 너무 오래됐으면 실패
+        if: steps.build.outputs.index_stale == '1'
+        env:
+          DETAIL: ${{ steps.build.outputs.index_detail }}
+        run: |
+          echo "::error::식약처 색인이 72시간 넘게 갱신되지 않았다. $DETAIL"
+          echo "사이트는 직전 색인으로 정상 배포됐다. 수집 경로(Cloudflare 중계, data.go.kr, MFDS_API_KEY)를 점검하라."
+          exit 1

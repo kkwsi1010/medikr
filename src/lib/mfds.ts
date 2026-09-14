@@ -176,7 +176,12 @@ export async function fetchAll<T>(
   endpoint: string,
   extra: Record<string, string> = {},
   maxPages = 500,
-  baseOverride?: string
+  baseOverride?: string,
+  // 빌드 수집을 Cloudflare 중계로 보낼 때 인증 헤더를 싣는다 (build-index 전용).
+  // 여기서 process.env 를 직접 읽지 않는 이유: 이 파일은 Workers 런타임에도
+  // 번들되는데 거기엔 process 가 없어서, vite define 으로 치환되지 않은 참조는
+  // SSR 전체를 ReferenceError 로 죽인다. 값은 Node 에서 도는 호출자가 넘긴다.
+  headers?: Record<string, string>
 ): Promise<T[]> {
   const PER = 100;
   const base = baseOverride ?? BASE;
@@ -185,7 +190,7 @@ export async function fetchAll<T>(
     ...extra,
     pageNo: '1',
     numOfRows: String(PER),
-  });
+  }, headers);
   if (first.items.length === 0) return [];
   const totalPages = Math.min(maxPages, Math.ceil(first.totalCount / PER));
   if (totalPages <= 1) return first.items;
@@ -203,7 +208,7 @@ export async function fetchAll<T>(
           ...extra,
           pageNo: String(pn),
           numOfRows: String(PER),
-        })
+        }, headers)
       )
     );
     for (const r of results) all.push(...r.items);
@@ -245,9 +250,9 @@ type FetchOutcome<T> =
   | { ok: true; items: T[]; totalCount: number }
   | { ok: false; reason: string; retryable: boolean };
 
-async function attemptFetch<T>(url: string): Promise<FetchOutcome<T>> {
+async function attemptFetch<T>(url: string, headers?: Record<string, string>): Promise<FetchOutcome<T>> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, headers ? { headers } : undefined);
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return {
@@ -286,7 +291,8 @@ async function fetchApiWithBase<T>(
   base: string,
   service: string,
   endpoint: string,
-  params: Record<string, string> = {}
+  params: Record<string, string> = {},
+  headers?: Record<string, string>
 ): Promise<{ items: T[]; totalCount: number }> {
   if (!HAS_KEY) {
     logMfdsFail(service, endpoint, 'MFDS_API_KEY 미설정');
@@ -302,7 +308,7 @@ async function fetchApiWithBase<T>(
   const url = `${base}/${service}/${endpoint}?${query.toString()}`;
   let lastReason = '(원인 미상)';
   for (let attempt = 1; attempt <= RETRY_MAX; attempt++) {
-    const r = await attemptFetch<T>(url);
+    const r = await attemptFetch<T>(url, headers);
     if (r.ok) return { items: r.items, totalCount: r.totalCount };
     lastReason = r.reason;
     if (!r.retryable || attempt === RETRY_MAX) break;

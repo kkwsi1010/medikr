@@ -4,6 +4,7 @@ name: 빌드 실패 AI 자동수정
 #
 # 손대지 않는 경우 (고칠 코드가 없는 실패):
 #   로그에 '예외 fetch failed' : 식약처 API 네트워크 단절. 기다리면 풀린다
+#   중계 502/404, 색인 72시간 알림 : 수집 경로(Cloudflare 중계) 인프라·설정 문제
 #   로그에 code=30/31/32       : API 키 미등록·만료·IP 제한. 사람만 해결 가능
 #   직전 커밋이 autofix 산물   : 자기 수정을 다시 고치는 무한루프 차단
 #
@@ -83,6 +84,14 @@ jobs:
             SKIP="실패 로그를 못 받았다. 근거 없이 코드를 고치지 않는다"
           elif grep -q '예외 fetch failed' failure.log; then
             SKIP="식약처 API 네트워크 단절 (외부 장애). 고칠 코드가 없다"
+          # 수집이 Cloudflare 중계를 거치면서 장애 문구가 달라졌다. 중계가 data.go.kr 에
+          # 못 닿으면 'HTTP 502 upstream fetch failed' 가, 중계 시크릿이 어긋나면
+          # 'HTTP 404 Not Found' 가 찍힌다. 둘 다 코드가 아니라 인프라·설정 문제다.
+          elif grep -qE 'upstream fetch failed|\[mfds\] FAIL .* HTTP 404' failure.log; then
+            SKIP="수집 중계 경로 문제 (data.go.kr 도달 불가 또는 중계 시크릿 불일치). 고칠 코드가 없다"
+          # 스냅샷으로 배포는 됐고 데이터만 묵어서 마지막 스텝이 실패시킨 경우.
+          elif grep -q '식약처 색인이 72시간 넘게' failure.log; then
+            SKIP="색인 갱신 지연 알림 (수집 경로 장애). 고칠 코드가 없다"
           elif grep -qE 'code=(30|31|32)' failure.log; then
             SKIP="식약처 API 키 문제 (미등록·만료·IP제한). 사람이 갱신해야 한다"
           elif git log -1 --pretty=%s | grep -q '\[autofix\]'; then
@@ -257,6 +266,10 @@ jobs:
         id: verify
         env:
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}
+          # 러너에서 data.go.kr 직접 접근은 막혀 있다. 중계 없이 검증하면 스냅샷도 없는
+          # 새 체크아웃이라 게이트에 걸려 수정이 옳아도 항상 실패한다.
+          MFDS_RELAY_URL: https://medikr.kr/api/mfds-relay
+          MFDS_RELAY_SECRET: ${{ secrets.MFDS_RELAY_SECRET }}
           PUBLIC_CACHE_VERSION: autofix-${{ github.run_id }}
         run: npm run build
 
