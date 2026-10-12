@@ -355,5 +355,40 @@ for (const d of drugs) {
   seedLines.push(seedRow(d.itemSeq, d.itemName));
 }
 const seedPath = path.join(process.cwd(), 'migrations', 'seed-drugs.sql');
+
+// ─── D1 에는 바뀐 행만 쓴다 ───────────────────────────────
+// 전체 seed 를 매일 INSERT OR REPLACE 하면 행마다 본행과 인덱스 2개를 지웠다 다시 써서
+// 하루 약 17만 행이 쓰인다. D1 무료 한도(하루 10만 행 쓰기)를 매번 넘겨, 그 뒤로는
+// 그날 하루 D1 쓰기가 전부 막혔다(방문자 카운터 포함). 2026-10 Cloudflare 알림으로 발견.
+// 실제로 바뀌는 약은 하루 수십 건이다.
+//
+// 비교 기준은 직전 빌드가 남긴 전체 seed(seed-drugs.sql)다. actions/cache 가 복원하고,
+// 워크플로우는 D1 적재가 실패한 날에는 스냅샷을 저장하지 않는다. 그래서 이 파일은
+// 항상 'D1 에 실제로 들어간 상태'와 같다. 기준이 없으면(캐시 소실) 전체를 한 번 쓴다.
+// 허가 목록에서 빠진 약을 지우지 않는 것은 예전 INSERT OR REPLACE 방식과 같다.
+const SEQ_RE = /VALUES \('((?:[^']|'')*)'/;
+const seqOf = (line: string): string | undefined => SEQ_RE.exec(line)?.[1];
+const baseBySeq = new Map<string, string>();
+if (fs.existsSync(seedPath)) {
+  for (const line of fs.readFileSync(seedPath, 'utf-8').split('\n')) {
+    const seq = seqOf(line);
+    if (seq) baseBySeq.set(seq, line);
+  }
+}
+const delta = seedLines.filter((line) => {
+  const seq = seqOf(line);
+  return !seq || baseBySeq.get(seq) !== line;
+});
+
 fs.writeFileSync(seedPath, seedLines.join('\n'));
 console.log(`[build-index] D1 seed: ${seedLines.length} rows, ${(fs.statSync(seedPath).size / 1024 / 1024).toFixed(1)}MB → ${seedPath}`);
+
+// 바뀐 것이 없으면 파일을 만들지 않는다. 워크플로우는 파일이 있을 때만 적재 스텝을 돈다.
+const deltaPath = path.join(process.cwd(), 'migrations', 'seed-drugs-delta.sql');
+fs.rmSync(deltaPath, { force: true });
+if (delta.length > 0) fs.writeFileSync(deltaPath, delta.join('\n'));
+if (baseBySeq.size === 0) {
+  console.warn(`[build-index] D1 비교 기준 seed 가 없다. 전체 ${delta.length} 행을 적재한다 (D1 하루 쓰기 한도를 넘는다).`);
+} else {
+  console.log(`[build-index] D1 변경분: ${delta.length} 행 (기준 ${baseBySeq.size} 행)${delta.length ? ` → ${deltaPath}` : ', 적재 생략'}`);
+}

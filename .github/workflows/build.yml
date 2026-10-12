@@ -72,21 +72,6 @@ jobs:
           PUBLIC_CACHE_VERSION: ${{ github.sha }}
         run: npm run build
 
-      # 실패한 빌드의 산출물을 저장하면 restore-keys 접두어 매칭이 그것을 먼저
-      # 집어서 멀쩡한 직전 스냅샷을 가린다. 빌드가 통과한 경우에만 저장한다.
-      # key 에 run_id 를 넣어 매번 새 항목으로 저장하므로, 복원은 항상 가장
-      # 최근 성공분을 집고 7일 미사용 evict 도 일어나지 않는다.
-      - name: 색인 스냅샷 저장
-        if: steps.build.outcome == 'success'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            src/data
-            public/sitemap.xml
-            public/sitemap-drugs-*.xml
-            migrations/seed-drugs.sql
-          key: mfds-index-${{ github.run_id }}
-
       - name: Upload build artifact (backup, optional)
         if: always()
         continue-on-error: true
@@ -115,8 +100,12 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 execute medikr-analytics --remote --file=migrations/0002_drug_cache.sql
 
-      - name: Seed D1 drug_cache (build-index 가 생성한 약 상세 적재)
-        if: github.ref == 'refs/heads/main'
+      # 전체 seed 가 아니라 build-index 가 뽑은 변경분만 적재한다. 전체를 매일 쓰면
+      # 하루 약 17만 행이 쓰여 D1 무료 한도(10만)를 넘고 그날 D1 쓰기가 전부 막혔다.
+      # 바뀐 약이 없거나(파일 없음) 수집이 실패해 스냅샷을 쓴 날은 이 스텝을 건너뛴다.
+      - name: Seed D1 drug_cache (변경분만)
+        id: seed
+        if: github.ref == 'refs/heads/main' && hashFiles('migrations/seed-drugs-delta.sql') != ''
         continue-on-error: true
         # D1 이 느린 날 이 스텝이 잡 예산을 다 먹으면 뒤의 Pages 배포까지 못 한다.
         # 캐시 갱신은 하루 미뤄도 되지만 배포는 미루면 안 되므로 여기서 끊는다.
@@ -125,7 +114,26 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 execute medikr-analytics --remote --file=migrations/seed-drugs.sql
+          command: d1 execute medikr-analytics --remote --file=migrations/seed-drugs-delta.sql
+
+      # 스냅샷의 seed-drugs.sql 은 다음 빌드의 D1 변경분 비교 기준이다. 그래서 D1 적재가
+      # 실패한 날은 저장하지 않는다. 저장해 버리면 D1 에 안 들어간 변경이 기준에는 들어간
+      # 것으로 남아 다시는 적재되지 않는다. 적재를 건너뛴 날(skipped)은 저장한다.
+      # 바뀐 약이 없어도 collected-at 은 새로 찍혀야 72시간 알림이 헛울리지 않는다.
+      #
+      # 실패한 빌드의 산출물을 저장하면 restore-keys 접두어 매칭이 그것을 먼저
+      # 집어서 멀쩡한 직전 스냅샷을 가리므로 빌드 통과도 조건이다.
+      # key 에 run_id 를 넣어 매번 새 항목으로 저장하므로 복원은 항상 가장 최근분을 집는다.
+      - name: 색인 스냅샷 저장
+        if: steps.build.outcome == 'success' && steps.seed.outcome != 'failure'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            src/data
+            public/sitemap.xml
+            public/sitemap-drugs-*.xml
+            migrations/seed-drugs.sql
+          key: mfds-index-${{ github.run_id }}
 
       - name: Register D1 binding to Pages project
         if: github.ref == 'refs/heads/main'

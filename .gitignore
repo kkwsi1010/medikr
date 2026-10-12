@@ -145,6 +145,7 @@ vite.config.ts.timestamp-*
 # Astro
 .astro/
 migrations/seed-drugs.sql
+migrations/seed-drugs-delta.sql
 
 # build-index 생성 sitemap (정적)
 public/sitemap.xml
